@@ -4,7 +4,5 @@ selenium
 webdriver-manager
 tqdm
 python-dotenv
-fastapi
-uvicorn
 psycopg[binary]
 psycopg-pool

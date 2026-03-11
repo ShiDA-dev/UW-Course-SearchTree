@@ -50,12 +50,14 @@
   let currentSelection = new Set(); // set of course ids in selected subtree
   const hasSelectedMap = new Map(); // node -> boolean for quick edge highlight
 
+  const EXAMPLE_COURSE_CODES = ['CS136', 'MATH136', 'STAT230'];
+
   // Preference betas
   // Delegated to PathFinder
   let metricsMedian = { liked: 0, easy: 0, useful: 0 };
   let metricsMin = { liked: 0, easy: 0, useful: 0 };
 
-  // Static data loaded from JSON file - no backend needed!
+  // Static data loaded from JSON file (see data/courses_data.json).
 
   function isCourseNode(node){ return PathFinder.isCourseNode(node); }
 
@@ -96,6 +98,14 @@
     renderSearchHistory();
   }
 
+  function showTreeEmptyState(container, type){
+    if(!container) return;
+    const msg = type === 'prereq'
+      ? "Search a course above to see its prerequisites and the recommended path."
+      : "Search a course above to see what courses it unlocks.";
+    container.innerHTML = `<div class="tree-empty" role="status">${msg}</div>`;
+  }
+
   function clearAll(){
     // Reset state and UI (but preserve loaded static data for suggestions)
     currentCourseId = null;
@@ -108,6 +118,8 @@
     statusEl.textContent = "";
     prereqContainer.innerHTML = "";
     futureContainer.innerHTML = "";
+    showTreeEmptyState(prereqContainer, 'prereq');
+    showTreeEmptyState(futureContainer, 'future');
     prereqMinimapContainer.classList.remove('visible');
     futureMinimapContainer.classList.remove('visible');
     // Clear input and hash
@@ -123,6 +135,13 @@
 
   function renderSearchHistory(){
     if(!searchHistoryEl) return;
+    // When no history, show example course chips so new users have one obvious action
+    if(searchHistory.length === 0){
+      searchHistoryEl.innerHTML = EXAMPLE_COURSE_CODES.map(code =>
+        `<button type="button" class="history-item example-item" data-code="${code}">${code}</button>`
+      ).join("");
+      return;
+    }
     // Render all first
     searchHistoryEl.innerHTML = searchHistory.map(code => `<button class="history-item" data-code="${code}">${code}</button>`).join("");
     // After render, trim from the right if overflowing the container
@@ -276,7 +295,7 @@
 
   function buildPrereqHierarchy(courseId, prereqIndex, maxDepth){
     // Recursively expand prerequisites until leaves or max depth
-    // Match backend logic exactly: start at depth=0, use depth >= maxDepth
+    // Tree build: start at depth=0, use depth >= maxDepth
     const visited = new Set();
     function dfs(courseInfo, depth){
       const id = (typeof courseInfo === 'string') ? courseInfo : courseInfo.id;
@@ -289,7 +308,7 @@
       })();
 
       // Stop expanding if we've hit the depth limit or already visited
-      // Backend uses: if depth >= max_depth: return {"id": course_id, "groups": [], "min_grade": min_grade, "uid": uid}
+      // At max depth: return leaf node with no groups
       if(depth >= maxDepth || visited.has(id)) return { id, groups: [], min_grade, uid };
       visited.add(id);
       
@@ -339,11 +358,11 @@
 
   function prunePrereqTree(node, maxDepth){
     // Post-process tree to remove empty groups at maxDepth boundary
-    // This matches backend behavior where nodes at depth >= maxDepth have empty groups
+    // At maxDepth boundary, nodes have empty groups
     function prune(n, depth){
       if(!n) return;
       if(depth >= maxDepth){
-        // At maxDepth boundary, ensure groups and children are empty (backend behavior)
+        // At maxDepth boundary, ensure groups and children are empty
         if(Array.isArray(n.groups)) n.groups = [];
         if(Array.isArray(n.children)) n.children.length = 0;
         return;
@@ -1535,12 +1554,16 @@
       statusEl.textContent = "";
       prereqContainer.innerHTML = "";
       futureContainer.innerHTML = "";
+      showTreeEmptyState(prereqContainer, 'prereq');
+      showTreeEmptyState(futureContainer, 'future');
       prereqMinimapContainer.classList.remove('visible');
       futureMinimapContainer.classList.remove('visible');
       lastPrereqRoot = null;
       lastFutureRoot = null;
       return;
     }
+
+    statusEl.textContent = "Searching...";
 
     // Ensure data is loaded
     if(!staticDataLoaded){
@@ -1558,6 +1581,8 @@
     // Check if course exists in our data
     if(!courseIdToCourse.has(query)){
       statusEl.textContent = `Course not found: ${query}`;
+      showTreeEmptyState(prereqContainer, 'prereq');
+      showTreeEmptyState(futureContainer, 'future');
       return;
     }
 
@@ -1579,8 +1604,7 @@
     if(lastPrereqRoot){ 
       renderPrereqTree(prereqContainer, lastPrereqRoot); 
     }
-    
-    statusEl.textContent = "";
+    statusEl.textContent = "Showing prerequisites for " + query + ".";
   }
 
   searchBtn.addEventListener("click", () => navigateToCourse(courseInput.value));
@@ -1715,15 +1739,21 @@
 
   // Init - load static data and start app
   loadData().then(()=>{
-    // prefill from hash if present
+    // prefill from hash if present; otherwise preload AMATH250 depth 2 balanced for new users
     const hash = (location.hash || "").replace(/^#/, "").trim();
-    // Ensure default preference is balanced on first load
     if (prefSelect) {
       prefSelect.value = 'balanced';
       PathFinder.setPreference('balanced');
     }
     if(hash){
       currentCourseId = normalizeCode(hash);
+      performSearch();
+    } else {
+      // New session: preload AMATH250, depth 2, balanced so users see the platform in action
+      if (prereqDepthSelect) prereqDepthSelect.value = '2';
+      if (futureDepthSelect) futureDepthSelect.value = '2';
+      currentCourseId = 'AMATH250';
+      addToSearchHistory('AMATH250');
       performSearch();
     }
     loadSearchHistory();

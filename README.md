@@ -6,6 +6,24 @@ Interactive UW Prereq Explorer: visualize UW course prerequisite and future-cour
 
 https://uwtree.site/
 
+## Platform demo
+
+The app opens with a sample course (e.g. AMATH 250) so you can see how it works right away. Search any course code to view its prerequisite tree and the courses it unlocks.
+
+**Overview** — Search bar, prerequisite tree, and future-courses tree. Each course node shows a score (from UW Flow ratings), course code, and minimum grade required when applicable. The highlighted path is the recommended sequence for your chosen preference.
+
+![Platform snapshot](pictures/plaform_snapshot.png)
+
+**Depth** — Control how many levels of prerequisites or future courses are shown (1, 2, 3, or Max for prerequisites). Deeper depth reveals more of the dependency graph.
+
+![Depth selection](pictures/depth_selection.png)
+
+**Course Path Finder** — Choose how the recommended path is weighted: Balanced, or focused on Likeness, Easiness, or Usefulness. Ratings come from [UW Flow](https://uwflow.com).
+
+![Course preference selection](pictures/course_preference_selection.png)
+
+---
+
 ## Optimal Course Path Selection
 
 For any given target course, its prerequisites can form a tree of requirements with AND/OR logic (we processed it with our own parser to convert natural language into a logical format, and this takes LONG time!). Then, the primary challenge is to navigate this structure to find an "optimal" course path for a student. This project frames the challenge as an **optimal directed subtree selection problem**. The goal is to select a subtree, rooted at the target course, that satisfies all logical requirements while maximizing a total "weight" score (how we find it is in the next section) derived from user preferences and historical course data from UWFlow.

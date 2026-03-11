@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UW Course Search Tree</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -14,6 +17,7 @@
   </nav>
   <header class="container">
     <h1>UW Course Search Tree</h1>
+    <p class="tagline">Plan your course path with prerequisite and future-course trees.</p>
     <div class="subtitle-container">
       <span class="course-chip-example highlight">
         <span class="weight-badge" style="color: #E1863C;">72</span>
@@ -24,6 +28,15 @@
         In this example, <span class="weight-badge course-chip-example" style="color: #E1863C;">72</span> is the comprehensive* score (higher the better) based on your Course Path Finder preference, and <span class="grade-badge course-chip-example">60</span> is the minimum grade required. So your STAT 230 score needs to be at least 60% to proceed.
       </span>
     </div>
+    <details class="how-to-read" open>
+      <summary>How to read the tree</summary>
+      <ul>
+        <li><strong>AND</strong> — all listed courses are required.</li>
+        <li><strong>OR</strong> — at least one of the listed options is required.</li>
+        <li><strong>Highlighted path</strong> — the recommended path for your Course Path Finder preference.</li>
+      </ul>
+    </details>
+    <p class="path-finder-hint path-finder-hint-header">We recommend a path by weighting course ratings by your preference. Ratings from <a href="https://uwflow.com" target="_blank" rel="noreferrer">UW Flow</a>.</p>
   </header>
 
   <main class="container">
@@ -37,7 +50,6 @@
         </div>
         <div class="search-history" id="search-history" aria-label="Recent searches"></div>
       </div>
-
     </section>
 
     <section id="status" class="status" aria-live="polite"></section>
@@ -49,7 +61,7 @@
           <div class="panel-controls">
             <label class="option">
               Depth
-              <select id="prereq-depth" class="select">
+              <select id="prereq-depth" class="select" title="How many levels of prerequisites to show">
                 <option value="1" selected>1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
@@ -83,7 +95,7 @@
           <div class="panel-controls">
             <label class="option">
               Depth
-              <select id="future-depth" class="select">
+              <select id="future-depth" class="select" title="How many levels of future courses to show">
                 <option value="1" selected>1</option>
                 <option value="2">2</option>
                 <option value="3">3</option>

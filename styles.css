@@ -29,7 +29,8 @@ body{
 .brand{
   font-weight:600;
   letter-spacing:.2px;
-  font-size:28px
+  font-size:28px;
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 .brand span{
   color:var(--accent)
@@ -66,7 +67,30 @@ header.container{padding-bottom:10px}
 main.container{padding-top:10px}
 h1{
   margin:0 0 4px;
-  font-size:24px
+  font-size:24px;
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.tagline{
+  margin:0 0 12px;
+  font-size:14px;
+  color:var(--muted);
+}
+.how-to-read{
+  margin-top:12px;
+  font-size:13px;
+  color:var(--muted);
+}
+.how-to-read summary{
+  cursor:pointer;
+  font-weight:500;
+  color:var(--text);
+}
+.how-to-read ul{
+  margin:8px 0 0;
+  padding-left:1.25em;
+}
+.how-to-read li{
+  margin:4px 0;
 }
 .subtitle{margin:0;color:var(--muted); font-size: 14px;}
 
@@ -151,6 +175,14 @@ h1{
   box-shadow:0 2px 8px rgba(0,0,0,.06);
   position: relative;
 }
+.results .panel:first-child{
+  border-left:4px solid var(--edge);
+  padding-left:8px;
+}
+.results .panel:last-child{
+  border-left:4px solid var(--edge-future);
+  padding-left:8px;
+}
 .panel-header{
   display:flex;
   flex-direction:column;
@@ -170,8 +202,25 @@ h1{
   display:flex;
   align-items:center;
   justify-content:flex-end;
+  flex-wrap:wrap;
   gap:16px;
   margin:8px 0 8px 0; /* align vertically under depth row */
+}
+.path-finder-hint{
+  font-size:12px;
+  color:var(--muted);
+  max-width:100%;
+}
+.path-finder-hint a{
+  color:var(--accent);
+  text-decoration:none;
+}
+.path-finder-hint a:hover{
+  text-decoration:underline;
+}
+.path-finder-hint-header{
+  margin-top:12px;
+  margin-bottom:0;
 }
 .panel h2{
   margin:4px 0 12px 0;
@@ -186,6 +235,16 @@ h1{
 .tree{position:relative;min-height:300px}
 .tree svg{width:100%;height:auto;display:block}
 .tree{overflow:auto}
+.tree-empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:280px;
+  padding:24px;
+  color:var(--muted);
+  font-size:14px;
+  text-align:center;
+}
 .results .panel .tree{
   max-height:80vh
 }

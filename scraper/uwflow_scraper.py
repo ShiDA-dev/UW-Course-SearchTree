@@ -1096,7 +1096,7 @@ if __name__ == '__main__':
     courses, prereqs, offerings = scrape_uwflow(limit=args.limit, html_prereqs=args.html_prereqs, use_selenium=args.use_selenium, samples=(sample_list or None), use_llm=args.use_llm, llm_model=args.llm_model)
 
     if args.to_db:
-        # Write directly to DB using same env vars as backend
+        # Write directly to DB using same env vars as export script (NEON_URL etc.)
         load_dotenv()
         host = os.getenv('DB_HOST', 'localhost')
         port = int(os.getenv('DB_PORT', '3306'))
