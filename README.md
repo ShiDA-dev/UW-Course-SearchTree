@@ -25,6 +25,19 @@ Static site (no bundler). Scripts load in order from `index.html`:
 
 Offline data pipeline (scraper → Postgres → export) still lives under `scraper/` and `scripts/`.
 
+## Deploy on Render
+
+This project is a **static website**. There is no `backend/` or `uvicorn` app.
+
+In the Render service settings, use:
+
+| Setting | Value |
+|---------|--------|
+| Build Command | `true` (do **not** run `pip install -r requirements.txt` — that file is only for the offline scraper) |
+| Start Command | `python serve.py` |
+
+`requirements.txt` is for local scraping / DB export only. The public site is served by [`serve.py`](serve.py) (stdlib HTTP server).
+
 ## Platform demo
 
 The app opens with a sample course (e.g. AMATH 250) so you can see how it works right away. Search any course code to view its prerequisite tree and the courses it unlocks.

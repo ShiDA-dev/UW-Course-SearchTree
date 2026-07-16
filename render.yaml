@@ -1,0 +1,12 @@
+# Render Blueprint — static course explorer (no uvicorn / no backend API).
+# After pushing, either:
+#   1) Update the existing Web Service Start/Build commands to match below, or
+#   2) Create a new service from this Blueprint in the Render dashboard.
+services:
+  - type: web
+    name: uw-course-searchtree
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: "python serve.py"
+    autoDeploy: true
