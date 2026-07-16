@@ -6,6 +6,25 @@ Interactive UW Prereq Explorer: visualize UW course prerequisite and future-cour
 
 https://uwtree.site/
 
+## Frontend layout
+
+Static site (no bundler). Scripts load in order from `index.html`:
+
+| File | Responsibility |
+|------|----------------|
+| `pathfinder.js` | Recommended-path algorithm (AND/OR cost selection) |
+| `js/app-state.js` | Shared state object used by all modules |
+| `js/svg-utils.js` | SVG helpers and minimap |
+| `js/selection.js` | Path highlight helpers |
+| `js/data.js` | Load `data/courses_data.json` and build indexes |
+| `js/tree-build.js` | Build prereq / future tree data structures |
+| `js/tree-render-prereq.js` | Draw prereq SVG (OR boxes, fan-in lines, chips) |
+| `js/tree-render-future.js` | Draw future-course SVG |
+| `js/search-ui.js` | Search suggestions and history chips |
+| `app.js` | UI events and search orchestration |
+
+Offline data pipeline (scraper → Postgres → export) still lives under `scraper/` and `scripts/`.
+
 ## Platform demo
 
 The app opens with a sample course (e.g. AMATH 250) so you can see how it works right away. Search any course code to view its prerequisite tree and the courses it unlocks.

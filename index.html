@@ -141,8 +141,17 @@
     </div>
   </div>
 
+  <!-- Script order matters (no bundler). See module map at top of app.js. -->
   <script src="./pathfinder.js?v=20250110"></script>
-  <script src="./app.js?v=20250114"></script>
+  <script src="./js/app-state.js?v=20260716"></script>
+  <script src="./js/svg-utils.js?v=20260716"></script>
+  <script src="./js/selection.js?v=20260716"></script>
+  <script src="./js/data.js?v=20260716"></script>
+  <script src="./js/tree-build.js?v=20260716"></script>
+  <script src="./js/tree-render-future.js?v=20260716"></script>
+  <script src="./js/tree-render-prereq.js?v=20260716"></script>
+  <script src="./js/search-ui.js?v=20260716"></script>
+  <script src="./app.js?v=20260716"></script>
 </body>
 </html>
 
