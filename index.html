@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260717c">
 </head>
 <body>
   <nav class="topbar">
@@ -33,10 +33,11 @@
       <ul>
         <li><strong>AND</strong> — all listed courses are required.</li>
         <li><strong>OR</strong> — at least one of the listed options is required.</li>
-        <li><strong>Highlighted path</strong> — the recommended path for your Course Path Finder preference.</li>
+        <li><strong>Search</strong> — shows the full prerequisite tree with Course Path Finder set to None (no path highlighted).</li>
+        <li><strong>Course Path Finder</strong> — pick a preference to focus on the recommended subtree. <strong>Clear</strong> or <strong>None</strong> restores the full unhighlighted tree.</li>
       </ul>
     </details>
-    <p class="path-finder-hint path-finder-hint-header">We recommend a path by weighting course ratings by your preference. Ratings from <a href="https://uwflow.com" target="_blank" rel="noreferrer">UW Flow</a>.</p>
+    <p class="path-finder-hint path-finder-hint-header">Search starts with the full tree. Use Course Path Finder to focus a recommended subtree (weighted by your preference). Ratings from <a href="https://uwflow.com" target="_blank" rel="noreferrer">UW Flow</a>.</p>
   </header>
 
   <main class="container">
@@ -78,6 +79,7 @@
         <div class="panel-subcontrols">
           <label class="option" for="pref-select">Course Path Finder
             <select id="pref-select" class="select" aria-label="Weight preference">
+              <option value="none" selected>None</option>
               <option value="balanced">Balanced</option>
               <option value="liked">Focus on Likeness</option>
               <option value="easy">Focus on Easiness</option>
@@ -143,15 +145,15 @@
 
   <!-- Script order matters (no bundler). See module map at top of app.js. -->
   <script src="./pathfinder.js?v=20250110"></script>
-  <script src="./js/app-state.js?v=20260716"></script>
+  <script src="./js/app-state.js?v=20260717c"></script>
   <script src="./js/svg-utils.js?v=20260716"></script>
-  <script src="./js/selection.js?v=20260716"></script>
+  <script src="./js/selection.js?v=20260717"></script>
   <script src="./js/data.js?v=20260716"></script>
   <script src="./js/tree-build.js?v=20260716"></script>
   <script src="./js/tree-render-future.js?v=20260716"></script>
   <script src="./js/tree-render-prereq.js?v=20260716"></script>
   <script src="./js/search-ui.js?v=20260716"></script>
-  <script src="./app.js?v=20260716"></script>
+  <script src="./app.js?v=20260717c"></script>
 </body>
 </html>
 

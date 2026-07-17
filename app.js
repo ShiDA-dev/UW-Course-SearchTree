@@ -29,11 +29,23 @@
   }
   S.showTreeEmptyState = showTreeEmptyState;
 
+  function isPathFinderOff() {
+    return !S.prefSelect || S.prefSelect.value === "none";
+  }
+
+  function applyPathFinderNone() {
+    S.pathFocusActive = false;
+    S.currentSelection = new Set();
+    if (S.prefSelect) S.prefSelect.value = "none";
+    renderPrereqView();
+  }
+
   function clearAll() {
     S.currentCourseId = null;
     S.lastPrereqRoot = null;
     S.lastFutureRoot = null;
     S.currentSelection = new Set();
+    S.pathFocusActive = false;
     S.statusEl.textContent = "";
     S.prereqContainer.innerHTML = "";
     S.futureContainer.innerHTML = "";
@@ -52,14 +64,21 @@
     SearchUI.renderSearchHistory();
   }
 
+  function renderPrereqView() {
+    const root = Selection.getPrereqDisplayRoot();
+    if (root) PrereqTree.render(S.prereqContainer, root);
+  }
+
   function renderTrees(courseId, prereqIndex, reverseIndex) {
     const prereqDepth = Math.max(1, Math.min(100, Number(S.prereqDepthSelect.value || 99)));
     S.lastPrereqRoot = TreeBuild.buildPrereqHierarchy(courseId, prereqIndex, prereqDepth);
     const depth = Math.max(0, Math.min(4, Number(S.futureDepthSelect.value || 0)));
     S.lastFutureRoot = TreeBuild.buildFutureHierarchy(courseId, reverseIndex, depth);
-    // Compute selection before first paint so we only render the prereq tree once
-    Selection.computeSelection();
-    PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+    // Fresh search/depth rebuild: full tree, Path Finder off, no highlight
+    S.pathFocusActive = false;
+    S.currentSelection = new Set();
+    if (S.prefSelect) S.prefSelect.value = "none";
+    renderPrereqView();
     FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
   }
   S.renderTrees = renderTrees;
@@ -71,15 +90,13 @@
     S.futureZoom = 1;
     S.shouldAutoZoomPrereq = true;
     S.shouldAutoZoomFuture = true;
-    if (S.prefSelect) {
-      S.prefSelect.value = "balanced";
-      PathFinder.setPreference("balanced");
-    }
+    if (S.prefSelect) S.prefSelect.value = "none";
 
     const normalizedCourseId = AppData.normalizeCode(courseId);
     S.currentCourseId = normalizedCourseId;
     SearchUI.addToSearchHistory(normalizedCourseId);
     S.currentSelection = new Set();
+    S.pathFocusActive = false;
 
     S.courseInput.value = "";
     S.suggestionsEl.classList.remove("visible");
@@ -98,7 +115,7 @@
       maxZ = 1.0;
     S.prereqZoom = Math.max(minZ, Math.min(maxZ, z));
     S.shouldAutoZoomPrereq = false;
-    if (S.lastPrereqRoot) PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+    renderPrereqView();
   }
 
   function setFutureZoom(z) {
@@ -148,7 +165,9 @@
     const reverseIndex = AppData.buildReverseIndex();
 
     PathFinder.updateMetrics({ median: S.metricsMedian, min: S.metricsMin });
-    PathFinder.setPreference((S.prefSelect && S.prefSelect.value) || "balanced");
+    if (!isPathFinderOff()) {
+      PathFinder.setPreference(S.prefSelect.value);
+    }
 
     renderTrees(query, prereqIndex, reverseIndex);
     S.statusEl.textContent = "Showing prerequisites for " + query + ".";
@@ -212,7 +231,7 @@
   }
 
   window.addEventListener("resize", () => {
-    if (S.lastPrereqRoot) PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+    renderPrereqView();
     if (S.lastFutureRoot) FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
   });
 
@@ -221,7 +240,7 @@
   if (S.prereqZoomResetBtn) {
     S.prereqZoomResetBtn.addEventListener("click", () => {
       S.shouldAutoZoomPrereq = true;
-      if (S.lastPrereqRoot) PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+      renderPrereqView();
     });
   }
   if (S.futureZoomInBtn) S.futureZoomInBtn.addEventListener("click", () => setFutureZoom(S.futureZoom * 1.2));
@@ -235,20 +254,23 @@
 
   if (S.prefSelect) {
     S.prefSelect.addEventListener("change", () => {
+      if (isPathFinderOff()) {
+        applyPathFinderNone();
+        return;
+      }
+      S.pathFocusActive = true;
       PathFinder.setPreference(S.prefSelect.value);
       Selection.computeSelection();
-      S.shouldAutoZoomPrereq = false;
-      if (S.lastPrereqRoot) PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+      S.shouldAutoZoomPrereq = true;
+      renderPrereqView();
     });
   }
 
   if (S.clearSelectionBtn) {
     S.clearSelectionBtn.addEventListener("click", () => {
-      S.currentSelection = new Set();
-      // Keep preference dropdown on current value (Clear only removes highlight)
       S.shouldAutoZoomPrereq = false;
       S.shouldAutoZoomFuture = false;
-      if (S.lastPrereqRoot) PrereqTree.render(S.prereqContainer, S.lastPrereqRoot);
+      applyPathFinderNone();
     });
   }
 
@@ -282,10 +304,7 @@
   // Init
   AppData.loadData().then(() => {
     const hash = (location.hash || "").replace(/^#/, "").trim();
-    if (S.prefSelect) {
-      S.prefSelect.value = "balanced";
-      PathFinder.setPreference("balanced");
-    }
+    if (S.prefSelect) S.prefSelect.value = "none";
     if (hash) {
       S.currentCourseId = AppData.normalizeCode(hash);
       performSearch();

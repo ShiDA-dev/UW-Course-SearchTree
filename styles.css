@@ -153,8 +153,7 @@ h1{
   height: 36px;
 }
 .panel-subcontrols .option{margin-left:0}
-/* Make only the Preference select 16px wider */
-#pref-select { width: 68px; }
+#pref-select { width: 118px; }
 .option.switch{
   display:none
 }

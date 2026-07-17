@@ -51,6 +51,8 @@
     // --- Path selection highlight ---
     currentSelection: new Set(),
     hasSelectedMap: new Map(),
+    // When true, prereq panel shows only the pathfinder-selected subtree
+    pathFocusActive: false,
 
     // --- Search UI ---
     searchHistory: [],
