@@ -27,9 +27,12 @@
     const { svg, g } = SvgUtils.makeSVG(container);
 
     const NODE_HEIGHT = OB.PILL_H;
-    const HORIZONTAL_GAP = 72;
+    // REVIEW D scene (101:529): column pitch ≈ 112px between basket left edges (280 − 168)
+    const HORIZONTAL_GAP = 112;
     const interGroupGap = 48;
     const intraGroupGap = OB.PILL_GAP;
+    const CANVAS_PAD_X = 32;
+    const CANVAS_PAD_Y = 24;
 
     const parentMap = new Map();
     (function buildParentMap(n, p) {
@@ -67,23 +70,9 @@
       return widthById.get(node.id + ":" + (node.uid || "")) || widthById.get(node.id) || maxNodeWidth;
     }
 
-    function computeMaxDepth(n) {
-      const kids = walkKids(n);
-      if (!kids.length) return 0;
-      let md = 0;
-      for (const c of kids) md = Math.max(md, 1 + computeMaxDepth(c));
-      return md;
-    }
-    const maxDepthForWidth = computeMaxDepth(root);
     const containerWidth = Math.max(300, Math.floor(container.clientWidth || container.getBoundingClientRect().width));
-    const sidePad = 24;
-    let levelGap = HORIZONTAL_GAP;
-    if (maxDepthForWidth > 0) {
-      levelGap = Math.max(
-        HORIZONTAL_GAP,
-        Math.floor((containerWidth - sidePad * 2 - maxNodeWidth - OB.basketWidth()) / maxDepthForWidth)
-      );
-    }
+    // Keep Figma column pitch; do not stretch columns to fill the viewport.
+    const levelGap = HORIZONTAL_GAP;
 
     let maxDepth = 0;
     let yCursor = 40;
@@ -230,19 +219,20 @@
       }
       for (const c of walkKids(n)) spanVisible(c);
     })(root);
-    const sideInset = 8;
-    let xScale = 1;
-    let xShift = 0;
+    // Center the compact tree in the gray canvas (Figma Highlighted path · px-32 / py-24).
+    let xShift = CANVAS_PAD_X;
     if (isFinite(rawMin) && rawMax > rawMin) {
-      const room = Math.max(rawMax - rawMin, containerWidth - sideInset * 2);
-      xScale = room / (rawMax - rawMin);
-      xShift = sideInset - rawMin * xScale;
-      const scaledRight = rawMax * xScale + xShift;
-      if (scaledRight > containerWidth - sideInset) xShift -= scaledRight - (containerWidth - sideInset);
+      const contentW = rawMax - rawMin;
+      const avail = Math.max(0, containerWidth - CANVAS_PAD_X * 2);
+      if (contentW <= avail) {
+        xShift = (containerWidth - contentW) / 2 - rawMin;
+      } else {
+        xShift = CANVAS_PAD_X - rawMin;
+      }
     }
     function nodePos(node) {
       const p = positions.get(node);
-      return { x: rawLeft(node) * xScale + xShift, y: p.y };
+      return { x: rawLeft(node) + xShift, y: p.y };
     }
 
     const groupNodes = [];
@@ -252,7 +242,7 @@
     })(root);
 
     const groupBounds = new Map();
-    let contentMaxY = yCursor;
+    let contentMaxY = 0;
     const basketMeta = new Map();
 
     for (const node of groupNodes) {
@@ -290,7 +280,7 @@
       const badgeW = Math.max(42, 16 + badgeLabel.length * 6);
       const badgeX = rectX + pad;
       const badgeY = rectY + pad;
-      SvgUtils.rect(g, badgeX, badgeY, badgeW, OB.BADGE_H, 6, "or-badge");
+      SvgUtils.rect(g, badgeX, badgeY, badgeW, OB.BADGE_H, 4, "or-badge");
       SvgUtils.svgText(g, badgeX + badgeW / 2, badgeY + OB.BADGE_H / 2, badgeLabel, "or-badge-text", "middle", "middle");
 
       // Foot control
@@ -383,7 +373,8 @@
         const ys = sources.map((s) => s.y).concat([targetY]);
         const minY = Math.min(...ys);
         const maxY = Math.max(...ys);
-        let spineX = maxSourceX + Math.max(18, (targetLeft - maxSourceX) * 0.45);
+        // REVIEW D fork-join: short H out of basket, shared V spine, H into pill + arrow on left edge
+        let spineX = maxSourceX + Math.max(16, Math.min(56, (targetLeft - maxSourceX) * 0.5));
         spineX = Math.min(spineX, targetLeft - 18);
         spineX = Math.max(spineX, maxSourceX + 8);
 
@@ -394,10 +385,10 @@
         }
         if (maxY - minY > 0.5) addEdgePath(`M ${spineX} ${minY} V ${maxY}`, routeOn);
         const tipX = targetLeft;
-        const baseX = tipX - 9;
+        const baseX = tipX - 10;
         if (baseX > spineX + 0.5) addEdgePath(`M ${spineX} ${targetY} H ${baseX}`, routeOn);
         const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        head.setAttribute("points", `${tipX},${targetY} ${baseX},${targetY - 4.5} ${baseX},${targetY + 4.5}`);
+        head.setAttribute("points", `${tipX},${targetY} ${baseX},${targetY - 5} ${baseX},${targetY + 5}`);
         head.setAttribute("class", routeOn ? "edge-anchor highlight-anchor" : "edge-anchor");
         edgesFrag.appendChild(head);
       }
@@ -426,20 +417,25 @@
         const w = getWidth(node);
         const isRoot = node === root;
         const selected = !isRoot && S.pathFocusActive && S.currentSelection.has(Selection.nodeKey(node));
+        // REVIEW D: selected path pills are 32px with 2px teal stroke; others stay 31px
+        const pillH = selected ? NODE_HEIGHT + 1 : NODE_HEIGHT;
+        const pillY = selected ? pos.y - 0.5 : pos.y;
         let cls = "node";
         if (isRoot) cls += " node-target";
         else if (selected) cls += " highlight-node";
-        SvgUtils.rect(nodeGroup, pos.x, pos.y, w, NODE_HEIGHT, 8, cls);
+        SvgUtils.rect(nodeGroup, pos.x, pillY, w, pillH, 8, cls);
         if (S.pathFocusActive && !isRoot && !selected) nodeGroup.setAttribute("opacity", "0.7");
 
         const label = S.courseIdToCourse.get(node.id)?.course_id || node.id;
+        const midY = pillY + pillH / 2;
         try {
           const wValue = OB.courseWeight(node.id);
           const scoreStr = String(Math.round(wValue));
-          const st = SvgUtils.svgText(nodeGroup, pos.x + 10, pos.y + NODE_HEIGHT / 2, scoreStr, "weight-text", "start", "middle");
+          const scoreX = selected ? pos.x + 14 : pos.x + 10;
+          const st = SvgUtils.svgText(nodeGroup, scoreX, midY, scoreStr, "weight-text", "start", "middle");
           st.setAttribute("fill", OB.scoreColor(wValue));
         } catch (_) {}
-        SvgUtils.svgText(nodeGroup, pos.x + w - 10, pos.y + NODE_HEIGHT / 2, label, "node-label", "end", "middle");
+        SvgUtils.svgText(nodeGroup, pos.x + w - 10, midY, label, "node-label", "end", "middle");
       }
       for (const child of walkKids(node)) drawNode(child);
     }
@@ -449,10 +445,27 @@
     g.appendChild(edgesFrag);
     g.appendChild(nodesFrag);
 
-    let graphTop = 0;
-    for (const b of groupBounds.values()) graphTop = Math.min(graphTop, b.minY);
-    const topShift = graphTop < 8 ? 8 - graphTop : 0;
-    const height = contentMaxY + topShift + 20;
+    let graphTop = Infinity;
+    let graphBottom = contentMaxY;
+    for (const b of groupBounds.values()) {
+      graphTop = Math.min(graphTop, b.minY);
+      graphBottom = Math.max(graphBottom, b.maxY);
+    }
+    for (const n of allNodes) {
+      const junction = n.isGroup || (n.id || "").startsWith("and-") || (n.id || "").startsWith("or-");
+      if (junction || !positions.has(n)) continue;
+      const p = nodePos(n);
+      graphTop = Math.min(graphTop, p.y);
+      graphBottom = Math.max(graphBottom, p.y + NODE_HEIGHT);
+    }
+    if (!isFinite(graphTop)) graphTop = 0;
+
+    const canvasH = Math.max(542, Math.floor(container.clientHeight || 542));
+    const contentH = Math.max(0, Math.max(graphBottom, contentMaxY) - graphTop);
+    // Prefer Figma's fixed 542 canvas; keep ≥24px total vertical inset when centering.
+    const fits = contentH + CANVAS_PAD_Y <= canvasH;
+    const topShift = fits ? (canvasH - contentH) / 2 - graphTop : CANVAS_PAD_Y - graphTop;
+    const height = fits ? canvasH : Math.ceil(contentH + CANVAS_PAD_Y * 2);
     const baseViewBoxWidth = containerWidth;
     const baseViewBoxHeight = height;
     let didAutoZoomPrereq = false;
@@ -467,12 +480,12 @@
     const viewBoxHeightP = baseViewBoxHeight / zoom;
     const viewBoxXP = (baseViewBoxWidth - viewBoxWidthP) / 2;
     const viewBoxYP = (baseViewBoxHeight - viewBoxHeightP) / 2;
-    svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("viewBox", `${viewBoxXP} ${viewBoxYP} ${viewBoxWidthP} ${viewBoxHeightP}`);
     svg.setAttribute("width", String(containerWidth));
-    svg.setAttribute("height", String(Math.max(120, Math.round(containerWidth * (viewBoxHeightP / viewBoxWidthP)))));
+    svg.setAttribute("height", String(height));
     svg.style.width = "100%";
-    svg.style.height = "auto";
+    svg.style.height = fits ? "100%" : "auto";
     g.setAttribute("transform", `translate(0,${topShift})`);
 
     SvgUtils.setupMinimap(container, svg, { contentWidth: baseViewBoxWidth, contentHeight: baseViewBoxHeight });

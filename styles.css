@@ -157,7 +157,9 @@ h1{
 .option.pref{margin-left:auto;display:flex;gap:6px;align-items:center}
 /* highlight styling: stroke only for readability */
 .highlight-node{fill:#F7F7F7 !important; stroke:var(--pf) !important; stroke-width:2px !important;}
-.highlight-edge{stroke:var(--pf) !important; stroke-width:2px !important; opacity:.72}
+.highlight-edge{stroke:var(--pf-edge) !important; stroke-width:1.5px !important; opacity:1}
+body:not([data-pref="none"]) #prereq-tree .edge{stroke:var(--pf-edge);stroke-width:1.5}
+body:not([data-pref="none"]) #prereq-tree .edge-anchor{fill:var(--pf-edge);opacity:1}
 body[data-pref="none"] .grade-badge,
 body[data-pref="none"] .grade-text,
 body[data-pref="none"] .weight-text{display:none}
@@ -312,9 +314,9 @@ body[data-pref="none"] .weight-text{display:none}
 }
 .node-label{font-size:13px;font-family:inherit;text-anchor:start;dominant-baseline:middle}
 .weight-text{font-size:12px;font-family:inherit;dominant-baseline:middle;font-weight:700}
-.edge{stroke:var(--edge);stroke-width:2;fill:none;stroke-linecap:round}
+.edge{stroke:var(--edge);stroke-width:1.5;fill:none;stroke-linecap:square;stroke-linejoin:miter}
 .edge-future{stroke:var(--edge-future);stroke-width:2;fill:none;stroke-linecap:round}
-.edge-anchor{fill:var(--edge);opacity:.8;stroke:none}
+.edge-anchor{fill:var(--edge);opacity:1;stroke:none}
 .edge-anchor-future{fill:var(--edge-future);opacity:.8;stroke:none}
 .group-label{fill:#0f172a;font-size:10px;opacity:.8}
 .edge-label{fill:#0f172a;font-size:10px;opacity:.8}
@@ -608,7 +610,14 @@ body[data-pref="none"] .pf-chip.is-on{
   box-shadow:none;
   min-height:0;
 }
-.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px}
+.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px;position:relative;z-index:5}
+.panel-footnote{
+  margin:10px 0 0;
+  color:#6a6a6a;
+  font-size:11px;
+  font-weight:400;
+  line-height:normal;
+}
 .depth-control{display:flex;align-items:center;gap:6px}
 .depth-value{
   height:24px;
@@ -641,14 +650,26 @@ body[data-pref="none"] .pf-chip.is-on{
   background:#f7f7f7;
   border-radius:10px;
   min-height:542px;
+  height:542px;
+  padding:0;
+  box-sizing:border-box;
+  display:block;
 }
+.view-explore .tree svg{
+  display:block;
+  margin:0 auto;
+}
+/* REVIEW D SoT has no zoom chrome on the prereq canvas — keep controls for a11y but unobtrusive */
 .view-explore .zoom-controls{
   position:absolute;
   left:28px;
   bottom:22px;
   z-index:2;
   gap:6px;
+  opacity:.55;
 }
+.view-explore .zoom-controls:focus-within,
+.view-explore .zoom-controls:hover{opacity:1}
 .view-explore .zoom-controls .btn{
   height:24px;
   padding:0 8px;
@@ -672,7 +693,7 @@ body[data-pref="none"] .pf-chip.is-on{
   background:#fff;
   border:1px solid #e2e8f0;
   border-radius:8px;
-  color:var(--pf);
+  color:#222;
   font-family:inherit;
   font-weight:600;
   font-size:12px;
