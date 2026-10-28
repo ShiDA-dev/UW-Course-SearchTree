@@ -51,8 +51,9 @@
     // --- Path selection highlight ---
     currentSelection: new Set(),
     hasSelectedMap: new Map(),
-    // When true, prereq panel shows only the pathfinder-selected subtree
+    // When true, recommended courses are outlined on the collapsed tree
     pathFocusActive: false,
+    orBasketExpanded: new Set(),
 
     // --- Search UI ---
     searchHistory: [],

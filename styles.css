@@ -325,7 +325,14 @@ body[data-pref="none"] .weight-text{display:none}
   font-size:14px;
   text-anchor:middle
 }
-.and-label{fill:#0f172a;font-size:12px;text-anchor:middle}
+.and-label{fill:#6a6a6a;font-size:11px;font-weight:500;text-anchor:middle}
+.or-badge{fill:#222}
+.or-badge-text{fill:#fff;font-size:10px;font-weight:600;font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif}
+.or-foot{fill:#6a6a6a;font-size:12px;font-weight:500;font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.or-basket-bg{fill:#fff;stroke:#222;stroke-width:1.5}
+.edge-anchor.highlight-anchor{fill:var(--pf-edge)}
+.node-target{fill:#F7F7F7;stroke:#222;stroke-width:2px}
+#prereq-tree .node-label{fill:#222;font-weight:500;text-anchor:end}
 .grade-badge{fill:#e2e8f0}
 .grade-text{
   font-size: 12px;

@@ -117,6 +117,7 @@
   }
 
   function renderTrees(courseId, prereqIndex, reverseIndex) {
+    if (window.OrBasket) OrBasket.clearExpanded();
     const prereqDepth = Math.max(1, Math.min(3, Number(S.prereqDepthSelect.value || 2)));
     if (S.prereqDepthSelect) S.prereqDepthSelect.value = String(prereqDepth);
     S.lastPrereqRoot = TreeBuild.buildPrereqHierarchy(courseId, prereqIndex, prereqDepth);
@@ -409,6 +410,7 @@
     if (!raw || key === "explore") {
       if (S.prereqDepthSelect) S.prereqDepthSelect.value = "2";
       if (S.futureDepthSelect) S.futureDepthSelect.value = "2";
+      S.shouldAutoZoomPrereq = true;
       S.currentCourseId = "AMATH250";
       SearchUI.addToSearchHistory("AMATH250");
       performSearch();
