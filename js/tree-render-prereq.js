@@ -1,10 +1,10 @@
 /**
- * Render the prerequisite tree as SVG (Phase C OR freeze grammar):
+ * Render the prerequisite tree as SVG (Phase C OR freeze + PROTO Balanced):
  * - OR baskets: 1 of N badge, score-sorted pills, collapsed +N more / Show less
- * - No spider lines inside baskets; orthogonal fork-join outbound
- * - One arrowhead on the destination pill's left edge (none at AND hubs)
- * - Depth 2+: highest-score subtree default; that pill gets strong ink stroke
+ * - Orthogonal fork-join only; arrowheads on the OUTSIDE of the destination box
+ * - Depth 2+: highest-score subtree default; that pill gets strong stroke
  * - AND centered H+V between stacked baskets
+ * - Stable column gap + centered scene (Figma 121:520), not letterboxed stretch
  */
 (function () {
   "use strict";
@@ -27,9 +27,11 @@
     const { svg, g } = SvgUtils.makeSVG(container);
 
     const NODE_HEIGHT = OB.PILL_H;
-    const HORIZONTAL_GAP = 72;
-    const interGroupGap = 48;
+    // Figma PROTO Balanced: basket 168, next column at 280 → 112px clear gap
+    const HORIZONTAL_GAP = 112;
+    const interGroupGap = 40;
     const intraGroupGap = OB.PILL_GAP;
+    const SIDE_INSET = 32;
 
     const parentMap = new Map();
     (function buildParentMap(n, p) {
@@ -52,7 +54,7 @@
       const isRoot = n === root;
       const isJunction = (n.id || "").startsWith("and-") || (n.id || "").startsWith("or-") || n.isGroup;
       const label = isJunction ? "" : S.courseIdToCourse.get(n.id)?.course_id || n.id;
-      let est = isJunction ? OB.basketWidth() : Math.max(OB.PILL_MIN_W, Math.min(180, 24 + (label.length * 7) + 28));
+      let est = isJunction ? OB.basketWidth() : Math.max(OB.PILL_MIN_W, Math.min(180, 24 + label.length * 7 + 28));
       if (isRoot) est = Math.max(est, OB.PILL_MIN_W);
       widthById.set(n.id + ":" + (n.uid || ""), est);
       widthById.set(n.id, est);
@@ -76,12 +78,13 @@
     }
     const maxDepthForWidth = computeMaxDepth(root);
     const containerWidth = Math.max(300, Math.floor(container.clientWidth || container.getBoundingClientRect().width));
-    const sidePad = 24;
+    // Keep Figma column rhythm; only grow gap when the scene would otherwise overflow.
+    const sceneNeed = maxDepthForWidth * HORIZONTAL_GAP + Math.max(maxNodeWidth, OB.basketWidth());
     let levelGap = HORIZONTAL_GAP;
-    if (maxDepthForWidth > 0) {
+    if (maxDepthForWidth > 0 && sceneNeed > containerWidth - SIDE_INSET * 2) {
       levelGap = Math.max(
-        HORIZONTAL_GAP,
-        Math.floor((containerWidth - sidePad * 2 - maxNodeWidth - OB.basketWidth()) / maxDepthForWidth)
+        72,
+        Math.floor((containerWidth - SIDE_INSET * 2 - Math.max(maxNodeWidth, OB.basketWidth())) / maxDepthForWidth)
       );
     }
 
@@ -154,7 +157,49 @@
           maxY = Math.max(maxY, p.y + NODE_HEIGHT);
         }
       }
+      // OR baskets paint badge + pad above the first pill — include that chrome
+      // so stacked 1-of-1 boxes don't visually overlap.
+      if (node.isGroup && isFinite(minY)) {
+        const chrome = OB.BASKET_PAD + OB.BADGE_H + OB.PILL_GAP;
+        const foot = (node.children || []).length > OB.TEASER ? OB.PILL_GAP + OB.FOOT_H : 0;
+        minY -= chrome;
+        maxY += OB.BASKET_PAD + foot;
+      }
       return { minY, maxY };
+    }
+
+    function shiftSubtree(node, dy) {
+      if (!dy) return;
+      (function walk(n) {
+        const p = positions.get(n);
+        if (p) p.y += dy;
+        walkKids(n).forEach(walk);
+      })(node);
+    }
+
+    function isCourseNode(n) {
+      if (!n || n.isGroup) return false;
+      const id = n.id || "";
+      return !id.startsWith("and-") && !id.startsWith("or-");
+    }
+
+    // Align each basket's outbound Y with its parent COURSE pill — kills the
+    // needless vertical jog before a straight H into the next box (Figma 121:520).
+    // Never align under AND/OR junctions (that collapses stacked branches).
+    function alignBasketExits(n) {
+      for (const child of walkKids(n)) alignBasketExits(child);
+      if (!isCourseNode(n)) return;
+      const kids = walkKids(n).filter((c) => c.isGroup);
+      const np = positions.get(n);
+      if (!np || !kids.length) return;
+      const wantY = np.y + NODE_HEIGHT / 2;
+      for (const basket of kids) {
+        const aim = OB.aimChild(basket);
+        const ap = aim && positions.get(aim);
+        const exitY = ap ? ap.y + NODE_HEIGHT / 2 : positions.get(basket)?.y;
+        if (exitY == null) continue;
+        shiftSubtree(basket, wantY - exitY);
+      }
     }
 
     const allNodes = [];
@@ -163,59 +208,64 @@
       walkKids(n).forEach(collect);
     })(root);
 
-    const nodesByDepth = new Map();
-    for (const node of allNodes) {
-      const p = positions.get(node);
-      if (!p) continue;
-      const depth = Math.round(p.x / levelGap);
-      if (!nodesByDepth.has(depth)) nodesByDepth.set(depth, []);
-      nodesByDepth.get(depth).push(node);
-    }
-
-    let iterations = 0;
-    while (iterations < 5) {
-      let changed = false;
-      for (let d = 0; d <= maxDepth; d++) {
-        const nodes = nodesByDepth.get(d) || [];
-        if (nodes.length < 2) continue;
-        nodes.sort((a, b) => (positions.get(a)?.y || 0) - (positions.get(b)?.y || 0));
-        for (let i = 0; i < nodes.length - 1; i++) {
-          const n1 = nodes[i];
-          const n2 = nodes[i + 1];
-          const p1 = parentMap.get(n1);
-          const p2 = parentMap.get(n2);
-          const isIntraGroup = p1 && p2 && p1 === p2 && p1.isGroup;
-          const gap = isIntraGroup ? intraGroupGap : interGroupGap;
-          const bounds1 = getSubtreeBounds(n1);
-          const bounds2 = getSubtreeBounds(n2);
-          if (!isFinite(bounds1.maxY) || !isFinite(bounds2.minY)) continue;
-          const overlap = bounds1.maxY - bounds2.minY;
-          if (overlap > -gap) {
-            changed = true;
-            const shift = overlap + gap;
-            const subtreeToShift = [];
-            (function collectSubtree(n) {
-              subtreeToShift.push(n);
-              walkKids(n).forEach(collectSubtree);
-            })(n2);
-            for (const n of subtreeToShift) {
-              const p = positions.get(n);
-              if (p) p.y += shift;
+    function resolveCollisions() {
+      const nodesByDepth = new Map();
+      for (const node of allNodes) {
+        const p = positions.get(node);
+        if (!p) continue;
+        const depth = Math.round(p.x / Math.max(1, levelGap));
+        if (!nodesByDepth.has(depth)) nodesByDepth.set(depth, []);
+        nodesByDepth.get(depth).push(node);
+      }
+      let iterations = 0;
+      while (iterations < 6) {
+        let changed = false;
+        for (let d = 0; d <= maxDepth; d++) {
+          const nodes = nodesByDepth.get(d) || [];
+          if (nodes.length < 2) continue;
+          nodes.sort((a, b) => (positions.get(a)?.y || 0) - (positions.get(b)?.y || 0));
+          for (let i = 0; i < nodes.length - 1; i++) {
+            const n1 = nodes[i];
+            const n2 = nodes[i + 1];
+            const p1 = parentMap.get(n1);
+            const p2 = parentMap.get(n2);
+            const isIntraGroup = p1 && p2 && p1 === p2 && p1.isGroup;
+            const gap = isIntraGroup ? intraGroupGap : interGroupGap;
+            // Intra-basket rows only need pill height — subtree bounds would
+            // shove siblings apart when a top-score row has a deep left tree.
+            const bounds1 = isIntraGroup
+              ? { minY: positions.get(n1).y, maxY: positions.get(n1).y + NODE_HEIGHT }
+              : getSubtreeBounds(n1);
+            const bounds2 = isIntraGroup
+              ? { minY: positions.get(n2).y, maxY: positions.get(n2).y + NODE_HEIGHT }
+              : getSubtreeBounds(n2);
+            if (!isFinite(bounds1.maxY) || !isFinite(bounds2.minY)) continue;
+            const overlap = bounds1.maxY - bounds2.minY;
+            if (overlap > -gap) {
+              changed = true;
+              shiftSubtree(n2, overlap + gap);
             }
           }
         }
+        if (!changed) break;
+        iterations++;
       }
-      if (!changed) break;
-      iterations++;
     }
 
-    const nominalContentWidth = (maxDepth + 1) * levelGap + Math.max(maxNodeWidth, OB.basketWidth()) + 10;
+    // Align for straight H, then resolve overlaps (and once more if align moved things).
+    alignBasketExits(root);
+    resolveCollisions();
+    alignBasketExits(root);
+    resolveCollisions();
+
+    const nominalContentWidth = maxDepth * levelGap + Math.max(maxNodeWidth, OB.basketWidth()) + 10;
     function rawLeft(node) {
       const p = positions.get(node);
       return nominalContentWidth - (p.x + getWidth(node));
     }
-    // Stretch column gaps so the leftmost basket and the target pill use the viewport width.
-    // Pill sizes stay fixed; only the x positions move.
+
+    // Measure content span, then CENTER in the viewport (Figma scene), with
+    // only a light stretch when the scene is wider than the panel.
     let rawMin = Infinity;
     let rawMax = -Infinity;
     (function spanVisible(n) {
@@ -230,15 +280,19 @@
       }
       for (const c of walkKids(n)) spanVisible(c);
     })(root);
-    const sideInset = 8;
+
     let xScale = 1;
-    let xShift = 0;
+    let xShift = SIDE_INSET;
     if (isFinite(rawMin) && rawMax > rawMin) {
-      const room = Math.max(rawMax - rawMin, containerWidth - sideInset * 2);
-      xScale = room / (rawMax - rawMin);
-      xShift = sideInset - rawMin * xScale;
-      const scaledRight = rawMax * xScale + xShift;
-      if (scaledRight > containerWidth - sideInset) xShift -= scaledRight - (containerWidth - sideInset);
+      const contentW = rawMax - rawMin;
+      const usable = Math.max(120, containerWidth - SIDE_INSET * 2);
+      if (contentW > usable) {
+        xScale = usable / contentW;
+        xShift = SIDE_INSET - rawMin * xScale;
+      } else {
+        xScale = 1;
+        xShift = SIDE_INSET + (usable - contentW) / 2 - rawMin;
+      }
     }
     function nodePos(node) {
       const p = positions.get(node);
@@ -254,6 +308,8 @@
     const groupBounds = new Map();
     let contentMaxY = yCursor;
     const basketMeta = new Map();
+    // course node → owning OR basket (for outside-box arrow tips)
+    const courseBasket = new Map();
 
     for (const node of groupNodes) {
       const visible = OB.visibleChildren(node);
@@ -269,6 +325,7 @@
         maxY = Math.max(maxY, pos.y + NODE_HEIGHT);
         minXp = Math.min(minXp, pos.x);
         maxXp = Math.max(maxXp, pos.x + w);
+        courseBasket.set(child, node);
       }
       if (!isFinite(minY)) continue;
       const pad = OB.BASKET_PAD;
@@ -280,11 +337,17 @@
       const rectWidth = Math.max(OB.basketWidth(), maxXp - minXp + pad * 2);
       const rectHeight = maxY - minY + pad * 2 + badgeBlock + footBlock;
       SvgUtils.rect(g, rectX, rectY, rectWidth, rectHeight, 8, "or-basket-bg");
-      groupBounds.set(node, { minY: rectY, maxY: rectY + rectHeight, midX: rectX + rectWidth / 2, minX: rectX, maxX: rectX + rectWidth, midY: rectY + rectHeight / 2 });
+      groupBounds.set(node, {
+        minY: rectY,
+        maxY: rectY + rectHeight,
+        midX: rectX + rectWidth / 2,
+        minX: rectX,
+        maxX: rectX + rectWidth,
+        midY: rectY + rectHeight / 2,
+      });
       basketMeta.set(node, { rectX, rectY, rectWidth, rectHeight, showFoot, visible });
       contentMaxY = Math.max(contentMaxY, rectY + rectHeight);
 
-      // Badge top-left: 1 of N
       const nCount = (node.children || []).length;
       const badgeLabel = `1 of ${nCount}`;
       const badgeW = Math.max(42, 16 + badgeLabel.length * 6);
@@ -293,7 +356,6 @@
       SvgUtils.rect(g, badgeX, badgeY, badgeW, OB.BADGE_H, 6, "or-badge");
       SvgUtils.svgText(g, badgeX + badgeW / 2, badgeY + OB.BADGE_H / 2, badgeLabel, "or-badge-text", "middle", "middle");
 
-      // Foot control
       if (showFoot) {
         const expanded = OB.isExpanded(node);
         const hidden = OB.hiddenCount(node);
@@ -352,9 +414,33 @@
       edgesFrag.appendChild(path);
     }
 
-    // Baskets share one vertical spine into the nearest course pill.
-    // Elbows only: H from the basket, V on the spine, H into the pill.
-    // The arrow sits on that pill's left edge — never on an AND hub.
+    function addArrow(tipX, tipY, onPath) {
+      const baseX = tipX - 9;
+      const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      head.setAttribute("points", `${tipX},${tipY} ${baseX},${tipY - 4.5} ${baseX},${tipY + 4.5}`);
+      head.setAttribute("class", onPath ? "edge-anchor highlight-anchor" : "edge-anchor");
+      edgesFrag.appendChild(head);
+    }
+
+    /**
+     * Destination port = OUTSIDE of the container box (Figma):
+     * - course inside an OR basket → left edge of that basket
+     * - root / bare target pill → left edge of the pill
+     */
+    function destPort(target) {
+      const tPos = nodePos(target);
+      const basket = courseBasket.get(target);
+      if (basket && groupBounds.has(basket)) {
+        const b = groupBounds.get(basket);
+        // Tip sits on the outer face of the basket stroke (not past it into cells).
+        return { x: b.minX, y: tPos.y + NODE_HEIGHT / 2, kind: "basket" };
+      }
+      return { x: tPos.x, y: tPos.y + NODE_HEIGHT / 2, kind: "pill" };
+    }
+
+    // Baskets share one vertical spine into the destination box.
+    // Elbows only: H from the basket, V on the spine, H to the tip.
+    // Tip sits on the outside of the target box — never inside a course cell.
     function drawBasketRoutes() {
       const byTarget = new Map();
       for (const basket of groupNodes) {
@@ -366,9 +452,9 @@
       }
 
       for (const [target, baskets] of byTarget) {
-        const tPos = nodePos(target);
-        const targetLeft = tPos.x;
-        const targetY = tPos.y + NODE_HEIGHT / 2;
+        const port = destPort(target);
+        const tipX = port.x;
+        const tipY = port.y;
         const sources = baskets.map((basket) => {
           const bounds = groupBounds.get(basket);
           const aim = OB.aimChild(basket);
@@ -379,27 +465,44 @@
           }
           return { x: bounds.maxX, y, basket };
         });
-        const maxSourceX = Math.max(...sources.map((s) => s.x));
-        const ys = sources.map((s) => s.y).concat([targetY]);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-        let spineX = maxSourceX + Math.max(18, (targetLeft - maxSourceX) * 0.45);
-        spineX = Math.min(spineX, targetLeft - 18);
-        spineX = Math.max(spineX, maxSourceX + 8);
 
         const routeOn = S.pathFocusActive && baskets.some((b) => S.hasSelectedMap.get(b));
+
+        if (sources.length === 1) {
+          const s = sources[0];
+          const on = S.pathFocusActive && !!S.hasSelectedMap.get(s.basket);
+          // Straight H when Y already matches (alignment pass); else H→V→H.
+          if (Math.abs(s.y - tipY) < 0.75) {
+            const baseX = tipX - 9;
+            if (baseX > s.x + 0.5) addEdgePath(`M ${s.x} ${s.y} H ${baseX}`, on);
+            addArrow(tipX, tipY, on);
+          } else {
+            const midX = (s.x + tipX) / 2;
+            addEdgePath(`M ${s.x} ${s.y} H ${midX}`, on);
+            addEdgePath(`M ${midX} ${s.y} V ${tipY}`, on);
+            const baseX = tipX - 9;
+            if (baseX > midX + 0.5) addEdgePath(`M ${midX} ${tipY} H ${baseX}`, on);
+            addArrow(tipX, tipY, on);
+          }
+          continue;
+        }
+
+        const maxSourceX = Math.max(...sources.map((s) => s.x));
+        const ys = sources.map((s) => s.y);
+        const minY = Math.min(...ys, tipY);
+        const maxY = Math.max(...ys, tipY);
+        let spineX = maxSourceX + Math.max(18, (tipX - maxSourceX) * 0.45);
+        spineX = Math.min(spineX, tipX - 18);
+        spineX = Math.max(spineX, maxSourceX + 8);
+
         for (const s of sources) {
           const on = S.pathFocusActive && !!S.hasSelectedMap.get(s.basket);
           addEdgePath(`M ${s.x} ${s.y} H ${spineX}`, on);
         }
         if (maxY - minY > 0.5) addEdgePath(`M ${spineX} ${minY} V ${maxY}`, routeOn);
-        const tipX = targetLeft;
         const baseX = tipX - 9;
-        if (baseX > spineX + 0.5) addEdgePath(`M ${spineX} ${targetY} H ${baseX}`, routeOn);
-        const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        head.setAttribute("points", `${tipX},${targetY} ${baseX},${targetY - 4.5} ${baseX},${targetY + 4.5}`);
-        head.setAttribute("class", routeOn ? "edge-anchor highlight-anchor" : "edge-anchor");
-        edgesFrag.appendChild(head);
+        if (baseX > spineX + 0.5) addEdgePath(`M ${spineX} ${tipY} H ${baseX}`, routeOn);
+        addArrow(tipX, tipY, routeOn);
       }
     }
 
@@ -425,10 +528,13 @@
 
         const w = getWidth(node);
         const isRoot = node === root;
+        const parent = parentMap.get(node);
         const selected = !isRoot && S.pathFocusActive && S.currentSelection.has(Selection.nodeKey(node));
+        const isTopScore = parent && parent.isGroup && OB.topScoreChild(parent) === node;
         let cls = "node";
         if (isRoot) cls += " node-target";
         else if (selected) cls += " highlight-node";
+        else if (isTopScore) cls += " stroke-strong";
         SvgUtils.rect(nodeGroup, pos.x, pos.y, w, NODE_HEIGHT, 8, cls);
         if (S.pathFocusActive && !isRoot && !selected) nodeGroup.setAttribute("opacity", "0.7");
 
@@ -449,12 +555,27 @@
     g.appendChild(edgesFrag);
     g.appendChild(nodesFrag);
 
-    let graphTop = 0;
-    for (const b of groupBounds.values()) graphTop = Math.min(graphTop, b.minY);
-    const topShift = graphTop < 8 ? 8 - graphTop : 0;
-    const height = contentMaxY + topShift + 20;
+    let graphTop = Infinity;
+    let graphBottom = -Infinity;
+    for (const b of groupBounds.values()) {
+      graphTop = Math.min(graphTop, b.minY);
+      graphBottom = Math.max(graphBottom, b.maxY);
+    }
+    for (const n of allNodes) {
+      if (n.isGroup || (n.id || "").startsWith("and-") || (n.id || "").startsWith("or-")) continue;
+      const p = positions.get(n) && nodePos(n);
+      if (!p) continue;
+      graphTop = Math.min(graphTop, p.y);
+      graphBottom = Math.max(graphBottom, p.y + NODE_HEIGHT);
+      contentMaxY = Math.max(contentMaxY, p.y + NODE_HEIGHT);
+    }
+    if (!isFinite(graphTop)) graphTop = 0;
+    const topPad = 24;
+    const topShift = graphTop < topPad ? topPad - graphTop : 0;
+    const bottomPad = 24;
+    const height = Math.max(contentMaxY, graphBottom) + topShift + bottomPad;
     const baseViewBoxWidth = containerWidth;
-    const baseViewBoxHeight = height;
+    const baseViewBoxHeight = Math.max(height, 420);
     let didAutoZoomPrereq = false;
     if (S.shouldAutoZoomPrereq) {
       S.prereqZoom = 1;
@@ -467,12 +588,14 @@
     const viewBoxHeightP = baseViewBoxHeight / zoom;
     const viewBoxXP = (baseViewBoxWidth - viewBoxWidthP) / 2;
     const viewBoxYP = (baseViewBoxHeight - viewBoxHeightP) / 2;
-    svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     svg.setAttribute("viewBox", `${viewBoxXP} ${viewBoxYP} ${viewBoxWidthP} ${viewBoxHeightP}`);
+    // Fill the Explore tree panel height (Figma ~542) without huge empty scroll.
+    const panelH = Math.max(420, Math.floor(container.clientHeight || 542));
     svg.setAttribute("width", String(containerWidth));
-    svg.setAttribute("height", String(Math.max(120, Math.round(containerWidth * (viewBoxHeightP / viewBoxWidthP)))));
+    svg.setAttribute("height", String(panelH));
     svg.style.width = "100%";
-    svg.style.height = "auto";
+    svg.style.height = "100%";
     g.setAttribute("transform", `translate(0,${topShift})`);
 
     SvgUtils.setupMinimap(container, svg, { contentWidth: baseViewBoxWidth, contentHeight: baseViewBoxHeight });
