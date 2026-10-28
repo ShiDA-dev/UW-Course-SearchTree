@@ -6,10 +6,10 @@
   "use strict";
 
 function buildPrereqHierarchy(courseId, prereqIndex, maxDepth){
-  // Recursively expand prerequisites until leaves or max depth
-  // Tree build: start at depth=0, use depth >= maxDepth
-  const visited = new Set();
-  function dfs(courseInfo, depth){
+  // Depth counts course expansions inside baskets (1–3).
+  // A course may appear on more than one branch; only an ancestor cycle stops expansion,
+  // so raising depth still lengthens the highest-score chain.
+  function dfs(courseInfo, depth, stack){
     const id = (typeof courseInfo === 'string') ? courseInfo : courseInfo.id;
     const min_grade = (typeof courseInfo === 'object') ? courseInfo.min_grade : undefined;
     
@@ -19,10 +19,8 @@ function buildPrereqHierarchy(courseId, prereqIndex, maxDepth){
       return window.__NODE_UID__++;
     })();
 
-    // Stop expanding if we've hit the depth limit or already visited
-    // At max depth: return leaf node with no groups
-    if(depth >= maxDepth || visited.has(id)) return { id, groups: [], min_grade, uid };
-    visited.add(id);
+    if(depth >= maxDepth || stack.has(id)) return { id, groups: [], min_grade, uid };
+    stack.add(id);
     
     const groupsMap = prereqIndex.get(id) || new Map();
     const groups = Array.from(groupsMap.keys()).sort((a,b)=>a-b).map(k=>{
@@ -44,28 +42,23 @@ function buildPrereqHierarchy(courseId, prereqIndex, maxDepth){
           if(!window.__NODE_UID__) window.__NODE_UID__ = 1;
           return window.__NODE_UID__++;
         })();
-        const orNode = { id: `or-group-${g.group}`, uid: orUid, children: g.courses.map(c => dfs(c, depth+1)), isGroup: true };
+        const orNode = { id: `or-group-${g.group}`, uid: orUid, children: g.courses.map(c => dfs(c, depth+1, stack)), isGroup: true };
         andNode.children.push(orNode);
       }
       children.push(andNode);
     } else if (groups.length === 1) {
       const g = groups[0];
-      if (g.courses.length > 1) {
-        // Single OR group, needs a junction
-        const orUid = (function(){
-          if(!window.__NODE_UID__) window.__NODE_UID__ = 1;
-          return window.__NODE_UID__++;
-        })();
-        const orNode = { id: `or-group-${g.group}`, uid: orUid, children: g.courses.map(c => dfs(c, depth+1)), isGroup: true };
-        children.push(orNode);
-      } else {
-        // Single course, no group node needed, just the course itself
-        children.push(...g.courses.map(c => dfs(c, depth+1)));
-      }
+      const orUid = (function(){
+        if(!window.__NODE_UID__) window.__NODE_UID__ = 1;
+        return window.__NODE_UID__++;
+      })();
+      const orNode = { id: `or-group-${g.group}`, uid: orUid, children: g.courses.map(c => dfs(c, depth+1, stack)), isGroup: true };
+      children.push(orNode);
     }
+    stack.delete(id);
     return { id, uid, groups, children, min_grade };
   }
-  return dfs(courseId, 0);
+  return dfs(courseId, 0, new Set());
 }
 
 function buildFutureHierarchy(courseId, reverseIndex, depth){
