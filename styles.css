@@ -1,19 +1,49 @@
 :root{
-  --bg:#ffffff;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#475569;
-  --accent:#0ea5e9;
-  --edge:#2563eb;
-  --edge-future:#7c3aed;
-  --surface:#f8fafc;
-  --border:#e2e8f0;
+  /* Phase B tokens (OR freeze + shared) */
+  --ink:#222222;
+  --fog:#6A6A6A;
+  --deco:#DDDDDD;
+  --soft:#F7F7F7;
+  --canvas:#FFFFFF;
+  --overlay:rgba(34,34,34,0.40);
+  --score-hi:#008A05;
+  --score-mid:#E07912;
+  --score-lo:#C13515;
+  --edge-prereq:#5C6B7A;
+  --edge-future:#7A6B8F;
+  --mode:#0F766E;
+  --mode-soft:#E6F3F2;
+  --danger:#C13515;
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-basket:14px;
+  --space-4:16px;
+  --space-5:24px;
+  --space-6:32px;
+  --space-7:48px;
+  --radius-sm:6px;
+  --radius-md:8px;
+  --radius-lg:12px;
+  --stroke:1px;
+  --stroke-strong:2px;
+  --font:"DM Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Legacy aliases (Phase D chrome still Design-owned — map quietly) */
+  --bg:var(--canvas);
+  --card:var(--canvas);
+  --text:var(--ink);
+  --muted:var(--fog);
+  --accent:var(--ink);
+  --edge:var(--edge-prereq);
+  --surface:var(--soft);
+  --border:var(--deco);
 }
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family:var(--font);
   color:var(--text);
   background:var(--bg);
 }
@@ -268,36 +298,44 @@ h1{
 }
 
 .node{
-  fill:#e2e8f0;
-  stroke:#64748b;
-  stroke-width:1.5
+  fill:var(--soft);
+  stroke:var(--deco);
+  stroke-width:var(--stroke)
+}
+.node-target,.node-top-score{
+  stroke:var(--ink);
+  stroke-width:var(--stroke-strong)
 }
 .clickable-node {
   cursor: pointer;
 }
-.node-label{font-size:13px;font-family:inherit;text-anchor:start;dominant-baseline:middle}
-.weight-text{font-size:12px;font-family:inherit;dominant-baseline:middle;font-weight:700}
-.edge{stroke:var(--edge);stroke-width:2;fill:none;stroke-linecap:round}
-.edge-future{stroke:var(--edge-future);stroke-width:2;fill:none;stroke-linecap:round}
-.edge-anchor{fill:var(--edge);opacity:.8;stroke:none}
-.edge-anchor-future{fill:var(--edge-future);opacity:.8;stroke:none}
-.group-label{fill:#0f172a;font-size:10px;opacity:.8}
-.edge-label{fill:#0f172a;font-size:10px;opacity:.8}
-.group-box{fill:#e6eef9;stroke:#91a3bc;stroke-width:1.4}
-.course-chip{fill:#e2e8f0;stroke:#64748b;stroke-width:1.4}
+.node-label{font-size:12px;font-family:var(--font);font-weight:600;fill:var(--ink);text-anchor:start;dominant-baseline:middle}
+.weight-text{font-size:12px;font-family:var(--font);dominant-baseline:middle;font-weight:700}
+.edge{stroke:var(--edge-prereq);stroke-width:1.5;fill:none;stroke-linecap:round}
+.edge-future{stroke:var(--edge-future);stroke-width:1.5;fill:none;stroke-linecap:round}
+.edge-anchor{fill:var(--edge-prereq);opacity:.9;stroke:none}
+.edge-anchor-future{fill:var(--edge-future);opacity:.9;stroke:none}
+.group-label{fill:var(--ink);font-size:10px;opacity:.8}
+.edge-label{fill:var(--ink);font-size:10px;opacity:.8}
+.group-box{fill:var(--canvas);stroke:var(--ink);stroke-width:1.5}
+.course-chip{fill:var(--soft);stroke:var(--deco);stroke-width:var(--stroke)}
 .or-label{
-  fill:#64748b;
+  fill:var(--fog);
   font-size:14px;
   text-anchor:middle
 }
-.and-label{fill:#0f172a;font-size:12px;text-anchor:middle}
-.grade-badge{fill:#e2e8f0}
+.and-label{fill:var(--fog);font-size:12px;font-weight:700;font-family:var(--font);text-anchor:middle}
+.or-badge{fill:var(--ink)}
+.or-badge-text{fill:#fff;font-size:10px;font-weight:600;font-family:var(--font)}
+.or-foot{fill:var(--fog);font-size:12px;font-weight:500;font-family:var(--font);text-decoration:underline;cursor:pointer}
+.or-basket-bg{fill:var(--canvas);stroke:var(--ink);stroke-width:1.5}
+.grade-badge{fill:var(--soft)}
 .grade-text{
   font-size: 12px;
-  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-  fill: #4a5568;
+  font-family: var(--font);
+  fill: var(--fog);
   dominant-baseline: middle;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 /* Specific overrides for course chips */
@@ -352,9 +390,9 @@ h1{
   font-weight: 700;
 }
 .prereq-group-bg {
-  fill: none;
-  stroke: #64748b95;
-  stroke-width: 2;
+  fill: var(--canvas);
+  stroke: var(--ink);
+  stroke-width: 1.5;
 }
 
 .footnote{color:var(--muted)}

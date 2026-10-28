@@ -75,6 +75,7 @@
     const depth = Math.max(0, Math.min(4, Number(S.futureDepthSelect.value || 0)));
     S.lastFutureRoot = TreeBuild.buildFutureHierarchy(courseId, reverseIndex, depth);
     // Fresh search/depth rebuild: full tree, Path Finder off, no highlight
+    if (window.OrBasket) OrBasket.clearExpanded();
     S.pathFocusActive = false;
     S.currentSelection = new Set();
     if (S.prefSelect) S.prefSelect.value = "none";

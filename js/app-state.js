@@ -53,6 +53,8 @@
     hasSelectedMap: new Map(),
     // When true, prereq panel shows only the pathfinder-selected subtree
     pathFocusActive: false,
+    // Phase C OR baskets: expanded uid set (collapsed default)
+    orBasketExpanded: new Set(),
 
     // --- Search UI ---
     searchHistory: [],
