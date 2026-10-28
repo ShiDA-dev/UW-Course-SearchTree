@@ -287,18 +287,31 @@
 
   const depthMinus = document.getElementById("depth-minus");
   const depthPlus = document.getElementById("depth-plus");
-  if (depthMinus && S.prereqDepthSelect) {
-    depthMinus.addEventListener("click", () => {
-      const next = Math.max(1, Number(S.prereqDepthSelect.value || 2) - 1);
-      S.prereqDepthSelect.value = String(next);
-      S.prereqDepthSelect.dispatchEvent(new Event("change"));
+  function nudgePrereqDepth(delta) {
+    if (!S.prereqDepthSelect) return;
+    const cur = Math.max(1, Math.min(3, Number(S.prereqDepthSelect.value || 2)));
+    const next = Math.max(1, Math.min(3, cur + delta));
+    if (next === cur) {
+      syncPfChrome();
+      return;
+    }
+    S.prereqDepthSelect.value = String(next);
+    syncPfChrome();
+    S.shouldAutoZoomPrereq = false;
+    if (S.currentCourseId) performSearch();
+  }
+  if (depthMinus) {
+    depthMinus.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nudgePrereqDepth(-1);
     });
   }
-  if (depthPlus && S.prereqDepthSelect) {
-    depthPlus.addEventListener("click", () => {
-      const next = Math.min(3, Number(S.prereqDepthSelect.value || 2) + 1);
-      S.prereqDepthSelect.value = String(next);
-      S.prereqDepthSelect.dispatchEvent(new Event("change"));
+  if (depthPlus) {
+    depthPlus.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nudgePrereqDepth(1);
     });
   }
 

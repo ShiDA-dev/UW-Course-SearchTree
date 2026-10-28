@@ -142,13 +142,13 @@ h1{
 .searchbar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px}
 .search-input{position:relative;flex:1 1 420px;display:flex;gap:8px;align-items:center;min-width:260px}
 .search-history{flex:1 1 520px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px;overflow:hidden}
-/* Match course chips in the SVG tree */
+/* Match basket pills in the SVG tree */
 .search-history .history-item{
-  padding:6px 10px;
-  border-radius:8px;
-  border:1.5px solid #64748b;
-  background:#e2e8f0;
-  color:#0f172a;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid #E8E8E8;
+  background:#F7F7F7;
+  color:#222;
   cursor:pointer;
   white-space:nowrap;
   font-size:13px;
@@ -156,7 +156,8 @@ h1{
 .search-history .history-item:hover{filter:brightness(0.98)}
 .option.pref{margin-left:auto;display:flex;gap:6px;align-items:center}
 /* highlight styling: stroke only for readability */
-.highlight-node{fill:#F7F7F7 !important; stroke:var(--pf) !important; stroke-width:2px !important;}
+.highlight-node{fill:#fff !important; stroke:var(--pf) !important; stroke-width:2px !important;}
+.highlight-node.stroke-strong{stroke:var(--pf) !important;}
 .highlight-edge{stroke:var(--pf-edge) !important; stroke-width:2px !important;}
 body[data-pref="none"] .grade-badge,
 body[data-pref="none"] .grade-text,
@@ -301,9 +302,11 @@ body[data-pref="none"] .weight-text{display:none}
   stroke-width: 1px;
 }
 
-.node{
-  fill:#F7F7F7;
-  stroke:#DDDDDD;
+/* Basket pill grammar — no legacy pale-blue (#e2e8f0) course chips on Explore */
+.node,
+.or-pill{
+  fill:#F0F0F0;
+  stroke:#D0D0D0;
   stroke-width:1
 }
 .root-node{fill:#F7F7F7;stroke:#222;stroke-width:2px}
@@ -312,14 +315,15 @@ body[data-pref="none"] .weight-text{display:none}
 }
 .node-label{font-size:13px;font-family:inherit;text-anchor:start;dominant-baseline:middle}
 .weight-text{font-size:12px;font-family:inherit;dominant-baseline:middle;font-weight:700}
-.edge{stroke:var(--edge);stroke-width:2;fill:none;stroke-linecap:round}
+.edge{stroke:var(--edge);stroke-width:2;fill:none;stroke-linecap:square;stroke-linejoin:miter}
 .edge-future{stroke:var(--edge-future);stroke-width:2;fill:none;stroke-linecap:round}
-.edge-anchor{fill:var(--edge);opacity:.8;stroke:none}
+.edge-anchor{fill:var(--edge);opacity:1;stroke:none}
 .edge-anchor-future{fill:var(--edge-future);opacity:.8;stroke:none}
 .group-label{fill:#0f172a;font-size:10px;opacity:.8}
 .edge-label{fill:#0f172a;font-size:10px;opacity:.8}
-.group-box{fill:#e6eef9;stroke:#91a3bc;stroke-width:1.4}
-.course-chip{fill:#e2e8f0;stroke:#64748b;stroke-width:1.4}
+.group-box{fill:#fff;stroke:#222;stroke-width:1.5}
+/* Retire pale-blue legacy chip fill — map to soft basket pill */
+.course-chip{fill:#F7F7F7;stroke:#E8E8E8;stroke-width:1}
 .or-label{
   fill:#64748b;
   font-size:14px;
@@ -332,7 +336,9 @@ body[data-pref="none"] .weight-text{display:none}
 .or-basket-bg{fill:#fff;stroke:#222;stroke-width:1.5}
 .edge-anchor.highlight-anchor{fill:var(--pf-edge)}
 .node-target{fill:#F7F7F7;stroke:#222;stroke-width:2px}
+.or-pill.stroke-strong{fill:#fff;stroke:#222;stroke-width:2px}
 #prereq-tree .node-label{fill:#222;font-weight:500;text-anchor:end}
+#prereq-tree .course-chip{fill:#F7F7F7;stroke:#E8E8E8}
 .grade-badge{fill:#e2e8f0}
 .grade-text{
   font-size: 12px;
@@ -608,7 +614,7 @@ body[data-pref="none"] .pf-chip.is-on{
   box-shadow:none;
   min-height:0;
 }
-.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px}
+.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px;position:relative;z-index:5}
 .depth-control{display:flex;align-items:center;gap:6px}
 .depth-value{
   height:24px;

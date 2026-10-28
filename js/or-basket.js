@@ -71,22 +71,28 @@
     return sorted[0] || null;
   }
 
-  /** Row the outbound edge aims at: recommended pick, else highest score. */
+  /**
+   * Outbound edge + depth expand aim at the highest-score course (freeze 46:121).
+   * Path Finder preference outline still uses pickedChild separately.
+   */
   function aimChild(orNode) {
-    return pickedChild(orNode) || topScoreChild(orNode);
+    return topScoreChild(orNode);
   }
 
   function orderedChildren(orNode) {
-    const sorted = sortedCourseChildren(orNode);
-    const picked = pickedChild(orNode);
-    if (!picked) return sorted;
-    return [picked, ...sorted.filter((c) => c !== picked)];
+    return sortedCourseChildren(orNode);
   }
 
   function visibleChildren(orNode) {
-    const ordered = orderedChildren(orNode);
-    if (isExpanded(orNode)) return ordered;
-    return ordered.slice(0, TEASER);
+    const sorted = sortedCourseChildren(orNode);
+    if (isExpanded(orNode)) return sorted;
+    const teaser = sorted.slice(0, TEASER);
+    const picked = pickedChild(orNode);
+    // Keep recommended visible in the collapsed teaser when it falls outside top 3
+    if (picked && !teaser.some((c) => nodeKey(c) === nodeKey(picked))) {
+      return [...teaser.slice(0, Math.max(0, TEASER - 1)), picked];
+    }
+    return teaser;
   }
 
   function hiddenCount(orNode) {
@@ -98,9 +104,10 @@
     return visibleChildren(orNode);
   }
 
+  /** Depth 2+: expand only the highest-score course's subtree by default. */
   function shouldShowSubtree(orNode, courseNode) {
-    const aim = aimChild(orNode);
-    return !!(aim && courseNode && nodeKey(aim) === nodeKey(courseNode));
+    const top = topScoreChild(orNode);
+    return !!(top && courseNode && nodeKey(top) === nodeKey(courseNode));
   }
 
   function basketWidth() {
