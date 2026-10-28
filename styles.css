@@ -21,7 +21,7 @@
 html,body{height:100%}
 body{
   margin:0;
-  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color:var(--text);
   background:var(--bg);
 }
@@ -32,7 +32,17 @@ body[data-pref="useful"]{--pf:#5C6B7A;--pf-soft:#E8EEF2;--pf-edge:rgba(92,107,12
 body[data-pref="liked"]{--pf:#C13515;--pf-soft:#FCEBEA;--pf-edge:rgba(193,53,21,.55)}
 body[data-pref="easy"]{--pf:#E07912;--pf-soft:#FFF4E5;--pf-edge:rgba(224,121,18,.55)}
 body[data-pref="none"]{--pf:#222222;--pf-soft:#ffffff;--pf-edge:transparent}
-.shell{max-width:1450px;margin:0 auto;padding:8px 12px 32px;display:flex;flex-direction:column;gap:8px}
+/* Full-bleed Explore/Guide/About — fill the viewport; no fixed centered column */
+.shell{
+  max-width:none;
+  width:100%;
+  margin:0;
+  padding:8px clamp(12px, 2vw, 24px) 32px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  box-sizing:border-box;
+}
 .topbar{position:sticky;top:0;z-index:20;background:#fff;border:0;border-radius:8px;height:70px;backdrop-filter:none}
 .topbar .inner{
   max-width:none;
@@ -52,7 +62,7 @@ body[data-pref="none"]{--pf:#222222;--pf-soft:#ffffff;--pf-edge:transparent}
   font-size:20px;
   color:#222;
   text-decoration:none;
-  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 .brand .t-teal{color:#0F766E}
 .brand .t-coral{color:#C13515}
@@ -98,7 +108,7 @@ main.container{padding-top:10px}
 h1{
   margin:0 0 4px;
   font-size:24px;
-  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 .tagline{
   margin:0 0 12px;
@@ -329,8 +339,8 @@ body[data-pref="none"] .weight-text{display:none}
 }
 .and-label{fill:#6a6a6a;font-size:11px;font-weight:500;text-anchor:middle}
 .or-badge{fill:#222}
-.or-badge-text{fill:#fff;font-size:10px;font-weight:600;font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif}
-.or-foot{fill:#6a6a6a;font-size:12px;font-weight:500;font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.or-badge-text{fill:#fff;font-size:10px;font-weight:600;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+.or-foot{fill:#6a6a6a;font-size:12px;font-weight:500;font-family:Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .or-basket-bg{fill:#fff;stroke:#222;stroke-width:1.5}
 .edge-anchor.highlight-anchor{fill:var(--pf-edge)}
 .node-target{fill:#F7F7F7;stroke:#222;stroke-width:2px}
@@ -705,7 +715,7 @@ body[data-pref="none"] .pf-chip.is-on{
 .status:empty{display:none}
 
 .doc-view{padding:16px 8px 24px;min-height:680px}
-.doc-hero h1{margin:8px 0 0;font-size:28px;font-weight:700;font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif}
+.doc-hero h1{margin:8px 0 0;font-size:28px;font-weight:700;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
 .doc-hero p{margin:8px 0 0;color:#6a6a6a;font-size:14px;font-weight:400}
 .doc-sections{
   display:flex;
@@ -739,7 +749,14 @@ body[data-pref="none"] .pf-chip.is-on{
   flex:0 0 auto;
 }
 .thumb img{width:305px;height:160px;display:block}
-.thumb-chips{background:#e6f3f2;gap:6px}
+.thumb-chips{
+  background:#e6f3f2;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-content:center;
+  align-items:center;
+}
 .thumb-basket,.thumb-depth,.thumb-scope,.thumb-support{background:#f7f7f7}
 .thumb-product{background:#f7f1e3;color:#222;font-size:22px;font-weight:700}
 .thumb-data{background:#e6f3f2;flex-direction:column;gap:8px;color:#0F766E;font-size:14px;font-weight:500}
