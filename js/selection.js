@@ -61,9 +61,10 @@
   }
 
   function getPrereqDisplayRoot() {
+    // Preference outlines the recommended courses. The collapsed baskets
+    // (siblings, +N more) stay on screen — do not prune to the chain.
     if (!S.lastPrereqRoot) return null;
-    if (!S.pathFocusActive || !S.currentSelection.size) return S.lastPrereqRoot;
-    return pruneToSelectedSubtree(S.lastPrereqRoot);
+    return S.lastPrereqRoot;
   }
 
   window.Selection = {

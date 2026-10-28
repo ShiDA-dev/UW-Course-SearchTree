@@ -1,0 +1,134 @@
+/**
+ * Collapsed OR baskets for the Path Finder tree.
+ * Path scoring stays in pathfinder.js. This module only decides which
+ * sibling rows are visible and which course's subtree stays open.
+ */
+(function () {
+  "use strict";
+  const S = window.AppState;
+
+  const PILL_H = 31;
+  const PILL_MIN_W = 120;
+  const BASKET_PAD = 14;
+  const PILL_GAP = 8;
+  const BADGE_H = 16;
+  const FOOT_H = 16;
+  const TEASER = 3;
+
+  function ensureState() {
+    if (!S.orBasketExpanded) S.orBasketExpanded = new Set();
+  }
+
+  function clearExpanded() {
+    ensureState();
+    S.orBasketExpanded.clear();
+  }
+
+  function isExpanded(orNode) {
+    ensureState();
+    return S.orBasketExpanded.has(orNode.uid || orNode.id);
+  }
+
+  function toggleExpanded(orNode) {
+    ensureState();
+    const key = orNode.uid || orNode.id;
+    if (S.orBasketExpanded.has(key)) S.orBasketExpanded.delete(key);
+    else S.orBasketExpanded.add(key);
+  }
+
+  function courseWeight(id) {
+    try {
+      return PathFinder.getCourseWeight(id, S.courseIdToCourse);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function scoreColor(v) {
+    if (v >= 80) return "#008A05";
+    if (v >= 50) return "#E07912";
+    return "#C13515";
+  }
+
+  function nodeKey(n) {
+    return window.Selection ? Selection.nodeKey(n) : n && (n.uid || n.id);
+  }
+
+  function sortedCourseChildren(orNode) {
+    const kids = (orNode.children || []).slice();
+    kids.sort((a, b) => courseWeight(b.id) - courseWeight(a.id));
+    return kids;
+  }
+
+  /** Recommended course in this basket, when Path Finder is on. */
+  function pickedChild(orNode) {
+    if (!S.pathFocusActive || !S.currentSelection || !S.currentSelection.size) return null;
+    return (orNode.children || []).find((c) => S.currentSelection.has(nodeKey(c))) || null;
+  }
+
+  function topScoreChild(orNode) {
+    const sorted = sortedCourseChildren(orNode);
+    return sorted[0] || null;
+  }
+
+  /** Row the outbound edge aims at: recommended pick, else highest score. */
+  function aimChild(orNode) {
+    return pickedChild(orNode) || topScoreChild(orNode);
+  }
+
+  function orderedChildren(orNode) {
+    const sorted = sortedCourseChildren(orNode);
+    const picked = pickedChild(orNode);
+    if (!picked) return sorted;
+    return [picked, ...sorted.filter((c) => c !== picked)];
+  }
+
+  function visibleChildren(orNode) {
+    const ordered = orderedChildren(orNode);
+    if (isExpanded(orNode)) return ordered;
+    return ordered.slice(0, TEASER);
+  }
+
+  function hiddenCount(orNode) {
+    const n = (orNode.children || []).length;
+    return Math.max(0, n - TEASER);
+  }
+
+  function layoutChildren(orNode) {
+    return visibleChildren(orNode);
+  }
+
+  function shouldShowSubtree(orNode, courseNode) {
+    const aim = aimChild(orNode);
+    return !!(aim && courseNode && nodeKey(aim) === nodeKey(courseNode));
+  }
+
+  function basketWidth() {
+    return BASKET_PAD * 2 + PILL_MIN_W;
+  }
+
+  window.OrBasket = {
+    PILL_H,
+    PILL_MIN_W,
+    BASKET_PAD,
+    PILL_GAP,
+    BADGE_H,
+    FOOT_H,
+    TEASER,
+    ensureState,
+    clearExpanded,
+    isExpanded,
+    toggleExpanded,
+    courseWeight,
+    scoreColor,
+    sortedCourseChildren,
+    topScoreChild,
+    aimChild,
+    pickedChild,
+    visibleChildren,
+    hiddenCount,
+    layoutChildren,
+    shouldShowSubtree,
+    basketWidth,
+  };
+})();
