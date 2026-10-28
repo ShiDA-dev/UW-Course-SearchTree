@@ -472,7 +472,7 @@ function renderPrereqTree(container, root){
       if(!isRoot){
         try{
           const wValue = PathFinder.getCourseWeight(node.id, S.courseIdToCourse);
-          const colorFor = (v)=>{ if(v < 50) return '#AF3434'; if(v < 80) return '#E1863C'; return '#4D7235'; };
+          const colorFor = (v)=>{ if(v < 50) return '#C13515'; if(v < 80) return '#E07912'; return '#008A05'; };
           const BADGE_W = 20; // compact and bring closer to label
           const by = pos.y + (NODE_HEIGHT - 16) / 2;
           const bx = pos.x + 4;
@@ -485,9 +485,10 @@ function renderPrereqTree(container, root){
 
       const t = SvgUtils.svgText(nodeGroup, labelStartX, pos.y + NODE_HEIGHT/2, label, "node-label", "start", "middle");
  
-      if(S.currentSelection.size){
-        const selected = S.currentSelection.has(Selection.nodeKey(node));
-        if(selected){ chip.setAttribute('class','node highlight-node'); }
+      if (node === root) {
+        chip.setAttribute("class", "node root-node");
+      } else if (S.currentSelection.size && S.currentSelection.has(Selection.nodeKey(node))) {
+        chip.setAttribute("class", "node highlight-node");
       }
 
       const hasGrade = node.min_grade !== undefined && node.min_grade !== null;

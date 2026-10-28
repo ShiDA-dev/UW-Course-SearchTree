@@ -33,10 +33,56 @@
     return !S.prefSelect || S.prefSelect.value === "none";
   }
 
+  const PREF_LABELS = {
+    balanced: "Balanced",
+    useful: "Useful",
+    liked: "Liked",
+    easy: "Easy",
+  };
+
+  function applyView() {
+    const raw = (location.hash || "").replace(/^#/, "").trim().toLowerCase();
+    const view = raw === "guide" || raw === "about" ? raw : "explore";
+    document.body.dataset.view = view;
+    const explore = document.getElementById("view-explore");
+    const guide = document.getElementById("view-guide");
+    const about = document.getElementById("view-about");
+    if (explore) explore.hidden = view !== "explore";
+    if (guide) guide.hidden = view !== "guide";
+    if (about) about.hidden = view !== "about";
+    document.querySelectorAll(".navlinks a").forEach((link) => {
+      link.classList.toggle("is-active", link.getAttribute("data-view") === view);
+    });
+  }
+
+  function syncPfChrome() {
+    const pref = (S.prefSelect && S.prefSelect.value) || "balanced";
+    document.body.dataset.pref = pref;
+    document.querySelectorAll(".pf-chip").forEach((chip) => {
+      const on = chip.getAttribute("data-pref") === pref;
+      chip.classList.toggle("is-on", on);
+      chip.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    const banner = document.getElementById("mode-banner");
+    if (banner) banner.hidden = pref === "none";
+    const title = document.getElementById("mode-banner-title");
+    if (title && PREF_LABELS[pref]) title.textContent = "Recommended path · " + PREF_LABELS[pref];
+    const depth = Math.max(1, Math.min(3, Number(S.prereqDepthSelect && S.prereqDepthSelect.value) || 2));
+    const depthLabel = document.getElementById("depth-label");
+    if (depthLabel) depthLabel.textContent = String(depth);
+    const minus = document.getElementById("depth-minus");
+    const plus = document.getElementById("depth-plus");
+    if (minus) minus.disabled = depth <= 1;
+    if (plus) plus.disabled = depth >= 3;
+    const courseTitle = document.getElementById("course-title");
+    if (courseTitle && S.currentCourseId) courseTitle.textContent = S.currentCourseId;
+  }
+
   function applyPathFinderNone() {
     S.pathFocusActive = false;
     S.currentSelection = new Set();
     if (S.prefSelect) S.prefSelect.value = "none";
+    syncPfChrome();
     renderPrereqView();
   }
 
@@ -55,6 +101,7 @@
     S.futureMinimapContainer.classList.remove("visible");
     if (S.courseInput) S.courseInput.value = "";
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    applyView();
     S.suggestionsEl.classList.remove("visible");
     S.suggestionsEl.innerHTML = "";
     S.searchHistory = [];
@@ -70,27 +117,33 @@
   }
 
   function renderTrees(courseId, prereqIndex, reverseIndex) {
-    const prereqDepth = Math.max(1, Math.min(100, Number(S.prereqDepthSelect.value || 99)));
+    const prereqDepth = Math.max(1, Math.min(3, Number(S.prereqDepthSelect.value || 2)));
+    if (S.prereqDepthSelect) S.prereqDepthSelect.value = String(prereqDepth);
     S.lastPrereqRoot = TreeBuild.buildPrereqHierarchy(courseId, prereqIndex, prereqDepth);
-    const depth = Math.max(0, Math.min(4, Number(S.futureDepthSelect.value || 0)));
+    const depth = Math.max(0, Math.min(4, Number(S.futureDepthSelect && S.futureDepthSelect.value || 0)));
     S.lastFutureRoot = TreeBuild.buildFutureHierarchy(courseId, reverseIndex, depth);
-    // Fresh search/depth rebuild: full tree, Path Finder off, no highlight
-    S.pathFocusActive = false;
-    S.currentSelection = new Set();
-    if (S.prefSelect) S.prefSelect.value = "none";
+    const pref = (S.prefSelect && S.prefSelect.value) || "balanced";
+    if (pref !== "none") {
+      PathFinder.setPreference(pref);
+      S.pathFocusActive = true;
+      Selection.computeSelection();
+    } else {
+      S.pathFocusActive = false;
+      S.currentSelection = new Set();
+    }
+    syncPfChrome();
     renderPrereqView();
     FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
   }
   S.renderTrees = renderTrees;
 
   function navigateToCourse(courseId) {
-    S.prereqDepthSelect.value = "1";
-    S.futureDepthSelect.value = "1";
+    S.prereqDepthSelect.value = "2";
+    if (S.futureDepthSelect) S.futureDepthSelect.value = "2";
     S.prereqZoom = 1;
     S.futureZoom = 1;
     S.shouldAutoZoomPrereq = true;
     S.shouldAutoZoomFuture = true;
-    if (S.prefSelect) S.prefSelect.value = "none";
 
     const normalizedCourseId = AppData.normalizeCode(courseId);
     S.currentCourseId = normalizedCourseId;
@@ -170,7 +223,7 @@
     }
 
     renderTrees(query, prereqIndex, reverseIndex);
-    S.statusEl.textContent = "Showing prerequisites for " + query + ".";
+    S.statusEl.textContent = "";
   }
   S.performSearch = performSearch;
 
@@ -221,14 +274,43 @@
     }
   });
 
-  if (S.prereqDepthSelect) {
+    if (S.prereqDepthSelect) {
     S.prereqDepthSelect.addEventListener("change", () => {
+      syncPfChrome();
       if (S.currentCourseId) {
         S.shouldAutoZoomPrereq = false;
         performSearch();
       }
     });
   }
+
+  const depthMinus = document.getElementById("depth-minus");
+  const depthPlus = document.getElementById("depth-plus");
+  if (depthMinus && S.prereqDepthSelect) {
+    depthMinus.addEventListener("click", () => {
+      const next = Math.max(1, Number(S.prereqDepthSelect.value || 2) - 1);
+      S.prereqDepthSelect.value = String(next);
+      S.prereqDepthSelect.dispatchEvent(new Event("change"));
+    });
+  }
+  if (depthPlus && S.prereqDepthSelect) {
+    depthPlus.addEventListener("click", () => {
+      const next = Math.min(3, Number(S.prereqDepthSelect.value || 2) + 1);
+      S.prereqDepthSelect.value = String(next);
+      S.prereqDepthSelect.dispatchEvent(new Event("change"));
+    });
+  }
+
+  document.querySelectorAll(".pf-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      if (!S.prefSelect) return;
+      S.prefSelect.value = chip.getAttribute("data-pref");
+      S.prefSelect.dispatchEvent(new Event("change"));
+    });
+  });
+
+  const headerSearch = document.getElementById("header-search");
+  if (headerSearch) headerSearch.addEventListener("submit", (e) => e.preventDefault());
 
   window.addEventListener("resize", () => {
     renderPrereqView();
@@ -262,6 +344,7 @@
       PathFinder.setPreference(S.prefSelect.value);
       Selection.computeSelection();
       S.shouldAutoZoomPrereq = true;
+      syncPfChrome();
       renderPrereqView();
     });
   }
@@ -296,23 +379,41 @@
   }
 
   window.addEventListener("hashchange", () => {
-    const hash = AppData.normalizeCode((location.hash || "").replace(/^#/, ""));
-    S.currentCourseId = hash;
+    const raw = (location.hash || "").replace(/^#/, "").trim();
+    const key = raw.toLowerCase();
+    applyView();
+    if (key === "guide" || key === "about") return;
+    if (!raw || key === "explore") {
+      if (!S.currentCourseId) {
+        S.currentCourseId = "AMATH250";
+        performSearch();
+      }
+      return;
+    }
+    S.currentCourseId = AppData.normalizeCode(raw);
     performSearch();
   });
 
-  // Init
+  // Init — prototype starts on Explore · Prerequisites · Balanced (depth 2)
   AppData.loadData().then(() => {
-    const hash = (location.hash || "").replace(/^#/, "").trim();
-    if (S.prefSelect) S.prefSelect.value = "none";
-    if (hash) {
-      S.currentCourseId = AppData.normalizeCode(hash);
-      performSearch();
-    } else {
+    const raw = (location.hash || "").replace(/^#/, "").trim();
+    const key = raw.toLowerCase();
+    if (S.prefSelect && !S.prefSelect.value) S.prefSelect.value = "balanced";
+    if (S.prereqDepthSelect && !S.prereqDepthSelect.value) S.prereqDepthSelect.value = "2";
+    applyView();
+    syncPfChrome();
+    if (key === "guide" || key === "about") {
+      SearchUI.loadSearchHistory();
+      return;
+    }
+    if (!raw || key === "explore") {
       if (S.prereqDepthSelect) S.prereqDepthSelect.value = "2";
       if (S.futureDepthSelect) S.futureDepthSelect.value = "2";
       S.currentCourseId = "AMATH250";
       SearchUI.addToSearchHistory("AMATH250");
+      performSearch();
+    } else {
+      S.currentCourseId = AppData.normalizeCode(raw);
       performSearch();
     }
     SearchUI.loadSearchHistory();

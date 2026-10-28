@@ -3,159 +3,224 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>UW Course Search Tree</title>
+  <title>UWTree</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260717c">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=20261028a">
 </head>
-<body>
-  <nav class="topbar">
-    <div class="inner">
-      <div class="brand" id="brand">UW<span>Tree</span></div>
-    </div>
-  </nav>
-  <header class="container">
-    <h1>UW Course Search Tree</h1>
-    <p class="tagline">Plan your course path with prerequisite and future-course trees.</p>
-    <div class="subtitle-container">
-      <span class="course-chip-example highlight">
-        <span class="weight-badge" style="color: #E1863C;">72</span>
-        <span>STAT 230</span>
-        <span class="grade-badge">60</span>
-      </span>
-      <span class="subtitle">
-        In this example, <span class="weight-badge course-chip-example" style="color: #E1863C;">72</span> is the comprehensive* score (higher the better) based on your Course Path Finder preference, and <span class="grade-badge course-chip-example">60</span> is the minimum grade required. So your STAT 230 score needs to be at least 60% to proceed.
-      </span>
-    </div>
-    <details class="how-to-read" open>
-      <summary>How to read the tree</summary>
-      <ul>
-        <li><strong>AND</strong> — all listed courses are required.</li>
-        <li><strong>OR</strong> — at least one of the listed options is required.</li>
-        <li><strong>Search</strong> — shows the full prerequisite tree with Course Path Finder set to None (no path highlighted).</li>
-        <li><strong>Course Path Finder</strong> — pick a preference to focus on the recommended subtree. <strong>Clear</strong> or <strong>None</strong> restores the full unhighlighted tree.</li>
-      </ul>
-    </details>
-    <p class="path-finder-hint path-finder-hint-header">Search starts with the full tree. Use Course Path Finder to focus a recommended subtree (weighted by your preference). Ratings from <a href="https://uwflow.com" target="_blank" rel="noreferrer">UW Flow</a>.</p>
-  </header>
-
-  <main class="container">
-    <section class="controls">
-      <div class="searchbar" role="search">
-        <div class="search-input">
-          <label for="course-input" class="sr-only">Course ID</label>
-          <input id="course-input" class="input" placeholder="Search course e.g., CS136 or MATH136" autocomplete="off" aria-label="Search courses" />
-          <button id="search-btn" class="btn btn-accent" aria-label="Search">Search</button>
+<body data-view="explore" data-pref="balanced">
+  <div class="shell">
+    <nav class="topbar">
+      <div class="inner">
+        <a class="brand" id="brand" href="#explore">UW<span class="tree-mark" aria-hidden="true"><span class="t-teal">T</span><span class="t-coral">r</span><span class="t-amber">e</span><span class="t-slate">e</span></span></a>
+        <form class="header-search" id="header-search" role="search">
+          <label for="course-input" class="sr-only">Course</label>
+          <input id="course-input" class="input" placeholder="CS 136, AMATH 250" autocomplete="off" aria-label="Search courses" />
+          <button id="search-btn" class="search-go" type="button" aria-label="Search">⌕</button>
           <div id="suggestions" class="suggestions" role="listbox" aria-label="Course suggestions"></div>
+        </form>
+        <div class="navlinks">
+          <a href="#explore" data-view="explore">Explore</a>
+          <a href="#guide" data-view="guide">Guide</a>
+          <a href="#about" data-view="about">About</a>
         </div>
-        <div class="search-history" id="search-history" aria-label="Recent searches"></div>
       </div>
-    </section>
+    </nav>
 
-    <section id="status" class="status" aria-live="polite"></section>
-
-    <section id="results" class="results">
-      <div class="panel">
-        <div class="panel-header">
-          <h2>Prerequisites</h2>
-          <div class="panel-controls">
-            <label class="option">
-              Depth
-              <select id="prereq-depth" class="select" title="How many levels of prerequisites to show">
-                <option value="1" selected>1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="99">Max</option>
-              </select>
-            </label>
-            <div class="zoom-controls">
-              <button id="prereq-zoom-out-btn" class="btn">-</button>
-              <button id="prereq-zoom-in-btn" class="btn">+</button>
-              <button id="prereq-zoom-reset-btn" class="btn">Reset</button>
-            </div>
-          </div>
+    <section id="view-explore" class="view-explore">
+      <div class="explore-banner">
+        <h1 id="course-title" class="course-title">AMATH250</h1>
+        <div class="pf-chips" role="radiogroup" aria-label="Path Finder">
+          <button type="button" class="pf-chip is-on" data-pref="balanced" role="radio" aria-checked="true">Balanced</button>
+          <button type="button" class="pf-chip" data-pref="useful" role="radio" aria-checked="false">Useful</button>
+          <button type="button" class="pf-chip" data-pref="liked" role="radio" aria-checked="false">Liked</button>
+          <button type="button" class="pf-chip" data-pref="easy" role="radio" aria-checked="false">Easy</button>
+          <button type="button" class="pf-chip" data-pref="none" role="radio" aria-checked="false">Off</button>
         </div>
-        <div class="panel-subcontrols">
-          <label class="option" for="pref-select">Course Path Finder
-            <select id="pref-select" class="select" aria-label="Weight preference">
-              <option value="none" selected>None</option>
-              <option value="balanced">Balanced</option>
-              <option value="liked">Focus on Likeness</option>
-              <option value="easy">Focus on Easiness</option>
-              <option value="useful">Focus on Usefulness</option>
-            </select>
-          </label>
-          <button id="clear-selection-btn" class="btn" aria-label="Clear selection">Clear</button>
+        <select id="pref-select" class="sr-only" aria-hidden="true" tabindex="-1">
+          <option value="balanced" selected>Balanced</option>
+          <option value="useful">Useful</option>
+          <option value="liked">Liked</option>
+          <option value="easy">Easy</option>
+          <option value="none">Off</option>
+        </select>
+      </div>
+
+      <div class="panel">
+        <div class="panel-tools">
+          <div class="depth-control" aria-label="Depth">
+            <div class="depth-value"><span>Depth</span><strong id="depth-label">2</strong></div>
+            <button type="button" id="depth-minus" aria-label="Decrease depth">−</button>
+            <button type="button" id="depth-plus" aria-label="Increase depth">+</button>
+          </div>
+          <select id="prereq-depth" class="sr-only" aria-hidden="true" tabindex="-1">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
         </div>
         <div id="prereq-tree" class="tree"></div>
         <div id="prereq-minimap" class="minimap"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">
-          <h2>Future courses</h2>
-          <div class="panel-controls">
-            <label class="option">
-              Depth
-              <select id="future-depth" class="select" title="How many levels of future courses to show">
-                <option value="1" selected>1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-              </select>
-            </label>
-            <div class="zoom-controls">
-              <button id="future-zoom-out-btn" class="btn">-</button>
-              <button id="future-zoom-in-btn" class="btn">+</button>
-              <button id="future-zoom-reset-btn" class="btn">Reset</button>
-            </div>
-          </div>
+        <div class="zoom-controls">
+          <button id="prereq-zoom-out-btn" class="btn" type="button" aria-label="Zoom out">−</button>
+          <button id="prereq-zoom-in-btn" class="btn" type="button" aria-label="Zoom in">+</button>
+          <button id="prereq-zoom-reset-btn" class="btn" type="button">Reset</button>
         </div>
+      </div>
+
+      <div id="mode-banner" class="mode-banner">
+        <strong id="mode-banner-title">Recommended path · Balanced</strong>
+        <p>Highlighting the subtree that best matches Liked / Easy / Useful weights from UWFlow.</p>
+        <button id="clear-selection-btn" type="button">Turn off</button>
+      </div>
+
+      <div id="search-history" class="search-history" aria-label="Recent searches"></div>
+      <section id="status" class="status" aria-live="polite"></section>
+
+      <div class="panel panel-future" hidden>
+        <select id="future-depth" class="sr-only" aria-hidden="true" tabindex="-1">
+          <option value="2" selected>2</option>
+        </select>
         <div id="future-tree" class="tree"></div>
         <div id="future-minimap" class="minimap"></div>
+        <button id="future-zoom-out-btn" type="button" hidden>−</button>
+        <button id="future-zoom-in-btn" type="button" hidden>+</button>
+        <button id="future-zoom-reset-btn" type="button" hidden>Reset</button>
       </div>
     </section>
-  </main>
 
-  <footer class="container footnote">
-    <small>
-      *The comprehensive score is calculated using a weighted average of course ratings (liked, easy, useful) based on user preference, and adjusted for reliability by the number of ratings.
-    </small>
-    <small>All data are scraped from <a href="https://uwflow.com" target="_blank" rel="noreferrer">UWFlow</a>.</small>
-    <small>Design and implementation by <a href="https://github.com/StevenShi998" target="_blank" rel="noreferrer">Steven Shi</a> </small>
-  </footer>
+    <section id="view-guide" class="doc-view" hidden>
+      <header class="doc-hero">
+        <h1>Guide</h1>
+        <p>How to read Explore — Path Finder prioritization on your prerequisite tree.</p>
+      </header>
+      <div class="doc-sections">
+        <article class="doc-card">
+          <div class="thumb">
+            <img src="./assets/guide-search.svg" width="305" height="160" alt="">
+          </div>
+          <p class="doc-kicker">1 · Search</p>
+          <h2>Find a course</h2>
+          <ul>
+            <li><strong>Header search</strong> is one field</li>
+            <li>Try <strong>CS 136</strong> or <strong>AMATH 250</strong></li>
+            <li><strong>Explore</strong> opens the tree for that course</li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-chips">
+            <span class="mini-chip mini-chip-on">Balanced</span>
+            <span class="mini-chip">Useful</span>
+            <span class="mini-chip">Liked</span>
+            <span class="mini-chip">Easy</span>
+            <span class="mini-chip">Off</span>
+          </div>
+          <p class="doc-kicker">2 · Path Finder</p>
+          <h2>Pick a priority</h2>
+          <ul>
+            <li><strong>Balanced</strong> (default), <strong>Useful</strong>, <strong>Liked</strong>, <strong>Easy</strong></li>
+            <li>Or <strong>Off</strong> for scores-off</li>
+            <li>Chips recolor the <strong>recommended path</strong></li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-basket">
+            <div class="mini-basket" aria-hidden="true">
+              <span class="mini-badge"></span>
+              <span class="mini-row mini-row-on"></span>
+              <span class="mini-row"></span>
+            </div>
+          </div>
+          <p class="doc-kicker">3 · OR baskets</p>
+          <h2>Read 1 of N</h2>
+          <ul>
+            <li>Each box is an <strong>OR</strong> group (<strong>1 of N</strong>)</li>
+            <li>The <strong>outlined row</strong> is the recommended pick</li>
+            <li><strong>AND</strong> joins required branches</li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-depth">
+            <span>Depth 2</span>
+            <span class="mini-step">−</span>
+            <span class="mini-step">+</span>
+          </div>
+          <p class="doc-kicker">4 · Depth</p>
+          <h2>How far to expand</h2>
+          <ul>
+            <li>Range <strong>1–3</strong> (default <strong>2</strong>)</li>
+            <li>Use <strong>− / +</strong> in the panel</li>
+            <li><strong>Collapse</strong> is the default view</li>
+          </ul>
+        </article>
+      </div>
+      <a class="back-explore" href="#explore"><span class="arrow">←</span> Back to Explore</a>
+      <p class="doc-note">Prototype · Path Finder prioritization only — Future courses not in this review.</p>
+    </section>
 
-  <div class="donation-widget">
-    <button id="donation-btn" class="donation-btn">
-      <img src="https://www.buymeacoffee.com/assets/img/guidelines/logo-mark-3.svg" alt="Buy me a coffee" class="coffee-icon"/>
-    </button>
+    <section id="view-about" class="doc-view" hidden>
+      <header class="doc-hero">
+        <h1>About</h1>
+        <p>What UWtree is, where ratings come from, and how we use them.</p>
+      </header>
+      <div class="doc-sections">
+        <article class="doc-card">
+          <div class="thumb thumb-product">UWTree</div>
+          <p class="doc-kicker">Product</p>
+          <h2>UWtree</h2>
+          <ul>
+            <li>Explore Waterloo <strong>prerequisites</strong> with a calm tree</li>
+            <li><strong>Search</strong> first, <strong>Path Finder</strong> for prioritization</li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-data">
+            <p>Liked · Easy · Useful</p>
+            <p class="thumb-data-sub">→ Balanced blend</p>
+          </div>
+          <p class="doc-kicker">Data</p>
+          <h2>UWFlow ratings</h2>
+          <ul>
+            <li><strong>Liked</strong>, <strong>Easy</strong>, and <strong>Useful</strong> come from <strong>UWFlow</strong></li>
+            <li><strong>Balanced</strong> blends them for a default <strong>recommended path</strong></li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-scope">
+            <span class="scope-pill">Path Finder · Prerequisites</span>
+          </div>
+          <p class="doc-kicker">Scope now</p>
+          <h2>Prioritization only</h2>
+          <ul>
+            <li>This release: <strong>Path Finder</strong> on <strong>Prerequisites</strong></li>
+            <li><strong>Future</strong> unlocks are not in the shipping prototype</li>
+          </ul>
+        </article>
+        <article class="doc-card">
+          <div class="thumb thumb-support">Guide · How to read</div>
+          <p class="doc-kicker">Support</p>
+          <h2>Credits &amp; help</h2>
+          <ul>
+            <li><strong>Guide</strong> covers how to read the tree</li>
+            <li>One support CTA later — <strong>no instruction wall</strong> on <strong>Explore</strong></li>
+          </ul>
+        </article>
+      </div>
+      <a class="back-explore" href="#explore"><span class="arrow">←</span> Back to Explore</a>
+      <p class="doc-note">Prototype for caller review · not production copy.</p>
+    </section>
   </div>
 
-  <div id="donation-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-      <button class="modal-close" id="modal-close-btn">&times;</button>
-      <h2>Enjoying this tool?</h2>
-      <p>If you find this course explorer helpful, consider supporting its development and maintenance. Your support helps keep this tool free and up-to-date for everyone.</p>
-      <a href="https://www.buymeacoffee.com/stevenshi" target="_blank" rel="noreferrer" class="bmc-btn">
-        <img src="https://www.buymeacoffee.com/assets/img/guidelines/logo-mark-3.svg" alt="Buy me a coffee" />
-        <span>Buy me a coffee</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- Script order matters (no bundler). See module map at top of app.js. -->
-  <script src="./pathfinder.js?v=20250110"></script>
-  <script src="./js/app-state.js?v=20260717c"></script>
-  <script src="./js/svg-utils.js?v=20260716"></script>
-  <script src="./js/selection.js?v=20260717"></script>
-  <script src="./js/data.js?v=20260716"></script>
-  <script src="./js/tree-build.js?v=20260716"></script>
-  <script src="./js/tree-render-future.js?v=20260716"></script>
-  <script src="./js/tree-render-prereq.js?v=20260716"></script>
-  <script src="./js/search-ui.js?v=20260716"></script>
-  <script src="./app.js?v=20260717c"></script>
-  <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="stevenshi" data-description="Support me on Buy me a coffee!" data-message="" data-color="#40DCA5" data-position="Right" data-x_margin="18" data-y_margin="18"></script>
+  <script src="./pathfinder.js?v=20261028a"></script>
+  <script src="./js/app-state.js?v=20261028a"></script>
+  <script src="./js/svg-utils.js?v=20261028a"></script>
+  <script src="./js/selection.js?v=20261028a"></script>
+  <script src="./js/data.js?v=20261028a"></script>
+  <script src="./js/tree-build.js?v=20261028a"></script>
+  <script src="./js/tree-render-future.js?v=20261028a"></script>
+  <script src="./js/tree-render-prereq.js?v=20261028a"></script>
+  <script src="./js/search-ui.js?v=20261028a"></script>
+  <script src="./app.js?v=20261028a"></script>
 </body>
 </html>
-
-
