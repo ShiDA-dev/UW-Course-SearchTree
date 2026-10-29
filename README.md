@@ -6,6 +6,25 @@ Interactive UW Prereq Explorer: visualize UW course prerequisite and future-cour
 
 https://uwtree.site/
 
+## Frontend layout
+
+Static site (no bundler). Scripts load in order from `index.html`:
+
+| File | Responsibility |
+|------|----------------|
+| `pathfinder.js` | Recommended-path algorithm (AND/OR cost selection) |
+| `js/app-state.js` | Shared state object used by all modules |
+| `js/svg-utils.js` | SVG helpers and minimap |
+| `js/selection.js` | Path highlight helpers |
+| `js/data.js` | Load `data/courses_data.json` and build indexes |
+| `js/tree-build.js` | Build prereq / future tree data structures |
+| `js/tree-render-prereq.js` | Draw prereq SVG (OR boxes, fan-in lines, chips) |
+| `js/tree-render-future.js` | Draw future-course SVG |
+| `js/search-ui.js` | Search suggestions and history chips |
+| `app.js` | UI events and search orchestration |
+
+Offline data pipeline (scraper → Postgres → export) still lives under `scraper/` and `scripts/`.
+
 ## Deploy on Render
 
 This project is a **static website**. There is no `backend/` or `uvicorn` app.
@@ -21,17 +40,17 @@ In the Render service settings, use:
 
 ## Platform demo
 
-The app opens on **AMATH 250** with Path Finder set to **Balanced** and depth **2**. Search stays in the header. Guide and About explain how to read the tree.
+The app opens with a sample course (e.g. AMATH 250) so you can see how it works right away. Search any course code to view its prerequisite tree and the courses it unlocks.
 
-**Overview** — Collapsed OR baskets (`1 of N`, sibling rows, `+N more`). The recommended course in each basket is outlined in the preference color. Other visible courses stay at about 70% opacity. Scores come from [UW Flow](https://uwflow.com).
+**Overview** — Search bar, prerequisite tree, and future-courses tree. Each course node shows a score (from UW Flow ratings), course code, and minimum grade required when applicable. The highlighted path is the recommended sequence for your chosen preference.
 
 ![Platform snapshot](pictures/plaform_snapshot.png)
 
-**Depth** — Plus and minus change how many prerequisite levels are drawn. Range is 1–3; the default is 2.
+**Depth** — Control how many levels of prerequisites or future courses are shown (1, 2, 3, or Max for prerequisites). Deeper depth reveals more of the dependency graph.
 
 ![Depth selection](pictures/depth_selection.png)
 
-**Course Path Finder** — Balanced, Useful, Liked, Easy, or Off. Balanced, Useful, Liked, and Easy recolor the recommended path. Off leaves the tree neutral (no path outline and no scores). The path itself is still chosen by the same weighting algorithm below.
+**Course Path Finder** — Choose how the recommended path is weighted: Balanced, or focused on Likeness, Easiness, or Usefulness. Ratings come from [UW Flow](https://uwflow.com).
 
 ![Course preference selection](pictures/course_preference_selection.png)
 
