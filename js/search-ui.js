@@ -1,14 +1,15 @@
 /**
  * Search suggestions and fuzzy ranking.
- * (Search-history chips removed — Figma Explore SoT has no bottom history row.)
+ * Search-history UI is deleted — Figma Explore SoT has no recent-search chips.
  */
 (function () {
   "use strict";
   const S = window.AppState;
 
-  function noopHistory() {
-    /* history UI retired */
-  }
+  // One-shot purge of legacy history storage from older builds
+  try {
+    localStorage.removeItem("uw_search_history");
+  } catch (_) {}
 
   function shouldSuggest(q) {
     return q.length >= 2;
@@ -118,12 +119,7 @@
     S.navigateToCourse(code);
   }
 
-  // Keep no-op history API so older call sites do not throw.
   window.SearchUI = {
-    loadSearchHistory: noopHistory,
-    saveSearchHistory: noopHistory,
-    addToSearchHistory: noopHistory,
-    renderSearchHistory: noopHistory,
     renderSuggestions: renderSuggestions,
     pickSuggestion: pickSuggestion,
   };

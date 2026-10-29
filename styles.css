@@ -392,6 +392,13 @@ body[data-pref="none"] .weight-text{display:none}
   color: #4a5568;
   font-weight: 700;
 }
+/* Legacy search-history chips — force-hidden if any cached HTML reinjects them */
+#search-history,
+.search-history,
+.history-item,
+button.history-item,
+.example-item{display:none!important}
+
 .footnote{color:var(--muted)}
 
 @media (max-width: 980px){

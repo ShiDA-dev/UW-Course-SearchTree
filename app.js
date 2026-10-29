@@ -10,7 +10,7 @@
  *   js/tree-build.js       — build prereq / future tree structures
  *   js/tree-render-future.js — draw future-course SVG
  *   js/tree-render-prereq.js — draw prereq SVG (OR boxes, fan-in lines)
- *   js/search-ui.js        — suggestions (history UI removed)
+ *   js/search-ui.js        — suggestions only
  *   app.js (this file)     — wire UI events and orchestrate search
  */
 (function () {
