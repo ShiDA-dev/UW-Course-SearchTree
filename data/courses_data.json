@@ -138668,84 +138668,69 @@
         ]
       }
     ],
-    "CS338": [
-      {
-        "group": 1,
-        "type": "OR",
-        "courses": [
-          {
-            "course_id": "AFM341",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS230",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS231",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS234",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS246",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS246E",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS330",
-            "min_grade": null
-          }
-        ]
-      },
-      {
-        "group": 2,
-        "type": "OR",
-        "courses": [
-          {
-            "course_id": "CS116",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS136",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS146",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS230",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS231",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS234",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS246",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS246E",
-            "min_grade": null
-          },
-          {
-            "course_id": "CS330",
-            "min_grade": null
-          }
-        ]
-      }
-    ],
+    "CS338": {
+      "groups_combine": "OR",
+      "source_note": "UW Undergraduate Calendar (e.g. 2022-23 CS 338): One of CS 230, 231, 234, 246, 330; or (AFM 341 and (CS 116 or CS 136 or CS 146)). Chart lists CS246E with 246. SCS course page lists a shorter subset — Calendar takes precedence per chart disclaimer.",
+      "groups": [
+        {
+          "group": 1,
+          "type": "OR",
+          "courses": [
+            {
+              "course_id": "CS230",
+              "min_grade": null
+            },
+            {
+              "course_id": "CS231",
+              "min_grade": null
+            },
+            {
+              "course_id": "CS234",
+              "min_grade": null
+            },
+            {
+              "course_id": "CS246",
+              "min_grade": null
+            },
+            {
+              "course_id": "CS246E",
+              "min_grade": null
+            },
+            {
+              "course_id": "CS330",
+              "min_grade": null
+            }
+          ]
+        },
+        {
+          "group": 2,
+          "type": "AND",
+          "courses": [
+            {
+              "course_id": "AFM341",
+              "min_grade": null
+            },
+            {
+              "type": "OR",
+              "courses": [
+                {
+                  "course_id": "CS116",
+                  "min_grade": null
+                },
+                {
+                  "course_id": "CS136",
+                  "min_grade": null
+                },
+                {
+                  "course_id": "CS146",
+                  "min_grade": null
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "CS341": [
       {
         "group": 1,

@@ -112,7 +112,12 @@
   }
 
   function renderTrees(courseId, prereqIndex, reverseIndex) {
-    if (window.OrBasket) OrBasket.clearExpanded();
+    const preserve = !!S.preservePathOnNextRender;
+    // Pins are captured in the depth handler before performSearch nulls the root.
+    const pinnedIds = preserve && S.pinnedPathCourseIds ? S.pinnedPathCourseIds : null;
+    S.preservePathOnNextRender = false;
+    S.pinnedPathCourseIds = null;
+    if (window.OrBasket && !preserve) OrBasket.clearExpanded();
     const prereqDepth = Math.max(1, Math.min(3, Number(S.prereqDepthSelect.value || 2)));
     if (S.prereqDepthSelect) S.prereqDepthSelect.value = String(prereqDepth);
     S.lastPrereqRoot = TreeBuild.buildPrereqHierarchy(courseId, prereqIndex, prereqDepth);
@@ -122,7 +127,11 @@
     if (pref !== "none") {
       PathFinder.setPreference(pref);
       S.pathFocusActive = true;
-      Selection.computeSelection();
+      if (preserve && pinnedIds && pinnedIds.size) {
+        Selection.computeSelectionPreservingPins(pinnedIds);
+      } else {
+        Selection.computeSelection();
+      }
     } else {
       S.pathFocusActive = false;
       S.currentSelection = new Set();
@@ -267,6 +276,9 @@
       syncPfChrome();
       if (S.currentCourseId) {
         S.shouldAutoZoomPrereq = false;
+        // Capture course_id pins before performSearch clears lastPrereqRoot.
+        S.pinnedPathCourseIds = Selection.selectedCourseIds();
+        S.preservePathOnNextRender = S.pinnedPathCourseIds.size > 0;
         performSearch();
       }
     });

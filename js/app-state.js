@@ -53,6 +53,11 @@
     // When true, recommended courses are outlined on the collapsed tree
     pathFocusActive: false,
     orBasketExpanded: new Set(),
+    // When true, next renderTrees rematerializes Path Finder picks by course_id
+    // (set on depth-only changes so uid rebuilds do not reshuffle the path).
+    preservePathOnNextRender: false,
+    pinnedPathCourseIds: null,
+    prereqStructured: null,
 
     // --- Search UI ---
     suggestionIndex: -1,

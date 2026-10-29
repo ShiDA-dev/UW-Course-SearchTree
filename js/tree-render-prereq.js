@@ -61,15 +61,29 @@
       return !!(n && (n.id || "").startsWith("and-"));
     }
 
-    /** OR baskets that feed a course (AND unwrapped). */
+    /** Top-level OR-of-groups (not an isGroup basket). */
+    function isOrCombine(n) {
+      return !!(n && !n.isGroup && (n.id || "").startsWith("or-"));
+    }
+
+    /** Collect leaf OR baskets under a junction (AND/OR-combine), recursively. */
+    function leafBaskets(node, out) {
+      if (!node) return;
+      if (node.isGroup) {
+        out.push(node);
+        return;
+      }
+      if (isAndJunction(node) || isOrCombine(node)) {
+        for (const c of node.children || []) leafBaskets(c, out);
+      }
+    }
+
+    /** OR baskets that feed a course (AND / OR-combine unwrapped). */
     function prereqBaskets(courseNode) {
       const out = [];
       for (const c of courseNode.children || []) {
-        if (isAndJunction(c)) {
-          for (const g of c.children || []) if (g.isGroup) out.push(g);
-        } else if (c.isGroup) {
-          out.push(c);
-        }
+        if (isAndJunction(c) || isOrCombine(c)) leafBaskets(c, out);
+        else if (c.isGroup) out.push(c);
       }
       return out;
     }
@@ -490,24 +504,53 @@
       }
     }
 
-    // AND labels: tied to the AND junction's child baskets, mid-gap only (never inside a basket)
-    (function drawAndLabels() {
-      (function walk(n) {
-        if (isAndJunction(n)) {
-          const kids = (n.children || []).filter((c) => c.isGroup && groupBounds.has(c));
-          for (let i = 0; i < kids.length - 1; i++) {
-            const b1 = groupBounds.get(kids[i]);
-            const b2 = groupBounds.get(kids[i + 1]);
-            if (!b1 || !b2) continue;
-            const gap = b2.minY - b1.maxY;
-            if (gap < 10) continue; // refuse to paint over crowded rows
-            const x = (b1.midX + b2.midX) / 2;
-            const y = b1.maxY + gap / 2;
-            const label = SvgUtils.svgText(g, x, y, "AND", "and-label", "middle", "middle");
-            label.setAttribute("data-and-uid", String(n.uid || n.id));
-            label.setAttribute("data-joins", `${kids[i].uid || kids[i].id},${kids[i + 1].uid || kids[i + 1].id}`);
-          }
+    /** Union of basket bounds under a node (basket or AND/OR junction). */
+    function spanBounds(node) {
+      if (!node) return null;
+      if (node.isGroup && groupBounds.has(node)) return groupBounds.get(node);
+      if (isAndJunction(node) || isOrCombine(node)) {
+        const parts = [];
+        for (const c of node.children || []) {
+          const s = spanBounds(c);
+          if (s) parts.push(s);
         }
+        if (!parts.length) return null;
+        return {
+          minY: Math.min(...parts.map((p) => p.minY)),
+          maxY: Math.max(...parts.map((p) => p.maxY)),
+          midX: parts.reduce((a, p) => a + p.midX, 0) / parts.length,
+          minX: Math.min(...parts.map((p) => p.minX)),
+          maxX: Math.max(...parts.map((p) => p.maxX)),
+          midY: 0,
+        };
+      }
+      return null;
+    }
+
+    function drawJoinLabels(junction, labelText, className, dataAttr) {
+      const kids = junction.children || [];
+      const spans = kids.map(spanBounds);
+      for (let i = 0; i < spans.length - 1; i++) {
+        const b1 = spans[i];
+        const b2 = spans[i + 1];
+        if (!b1 || !b2) continue;
+        const gap = b2.minY - b1.maxY;
+        if (gap < 10) continue;
+        const x = (b1.midX + b2.midX) / 2;
+        const y = b1.maxY + gap / 2;
+        const label = SvgUtils.svgText(g, x, y, labelText, className, "middle", "middle");
+        label.setAttribute(dataAttr, String(junction.uid || junction.id));
+        const a = kids[i].uid || kids[i].id;
+        const b = kids[i + 1].uid || kids[i + 1].id;
+        label.setAttribute("data-joins", `${a},${b}`);
+      }
+    }
+
+    // AND / OR labels: mid-gap between the groups they join (never inside a basket)
+    (function drawLogicLabels() {
+      (function walk(n) {
+        if (isAndJunction(n)) drawJoinLabels(n, "AND", "and-label", "data-and-uid");
+        if (isOrCombine(n)) drawJoinLabels(n, "OR", "or-label", "data-or-uid");
         for (const c of n.children || []) walk(c);
       })(root);
     })();
