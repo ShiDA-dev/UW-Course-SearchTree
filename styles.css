@@ -151,19 +151,6 @@ h1{
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 .searchbar{position:relative;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px}
 .search-input{position:relative;flex:1 1 420px;display:flex;gap:8px;align-items:center;min-width:260px}
-.search-history{flex:1 1 520px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px;overflow:hidden}
-/* Match course chips in the SVG tree */
-.search-history .history-item{
-  padding:6px 10px;
-  border-radius:8px;
-  border:1px solid #ddd;
-  background:#fff;
-  color:#222;
-  cursor:pointer;
-  white-space:nowrap;
-  font-size:13px;
-}
-.search-history .history-item:hover{filter:brightness(0.98)}
 .option.pref{margin-left:auto;display:flex;gap:6px;align-items:center}
 /* highlight styling: stroke only for readability */
 .highlight-node{fill:#F7F7F7 !important; stroke:var(--pf) !important; stroke-width:2px !important;}
@@ -405,19 +392,12 @@ body[data-pref="none"] .weight-text{display:none}
   color: #4a5568;
   font-weight: 700;
 }
-.prereq-group-bg {
-  fill: none;
-  stroke: #64748b95;
-  stroke-width: 2;
-}
-
 .footnote{color:var(--muted)}
 
 @media (max-width: 980px){
   .results{grid-template-columns:1fr;}
   .panel.center{order:-1}
   .search-input{flex:1 1 100%; min-width:0}
-  .search-history{flex:1 1 100%}
 }
 
 .donation-widget {
@@ -710,7 +690,6 @@ body[data-pref="none"] .pf-chip.is-on{
   padding:6px 10px;
   cursor:pointer;
 }
-.search-history{padding:4px 6px 0}
 .status{min-height:0;margin:0;padding:0 6px}
 .status:empty{display:none}
 

@@ -10,7 +10,7 @@
  *   js/tree-build.js       — build prereq / future tree structures
  *   js/tree-render-future.js — draw future-course SVG
  *   js/tree-render-prereq.js — draw prereq SVG (OR boxes, fan-in lines)
- *   js/search-ui.js        — suggestions + search history
+ *   js/search-ui.js        — suggestions (history UI removed)
  *   app.js (this file)     — wire UI events and orchestrate search
  */
 (function () {
@@ -104,11 +104,6 @@
     applyView();
     S.suggestionsEl.classList.remove("visible");
     S.suggestionsEl.innerHTML = "";
-    S.searchHistory = [];
-    try {
-      localStorage.removeItem("uw_search_history");
-    } catch (_) {}
-    SearchUI.renderSearchHistory();
   }
 
   function renderPrereqView() {
@@ -148,7 +143,6 @@
 
     const normalizedCourseId = AppData.normalizeCode(courseId);
     S.currentCourseId = normalizedCourseId;
-    SearchUI.addToSearchHistory(normalizedCourseId);
     S.currentSelection = new Set();
     S.pathFocusActive = false;
 
@@ -229,13 +223,6 @@
   S.performSearch = performSearch;
 
   // --- Event wiring ---
-  if (S.searchHistoryEl) {
-    S.searchHistoryEl.addEventListener("click", (e) => {
-      const btn = e.target.closest(".history-item");
-      if (btn) SearchUI.pickSuggestion(btn.getAttribute("data-code"));
-    });
-  }
-
   S.searchBtn.addEventListener("click", () => navigateToCourse(S.courseInput.value));
   S.courseInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -404,7 +391,6 @@
     applyView();
     syncPfChrome();
     if (key === "guide" || key === "about") {
-      SearchUI.loadSearchHistory();
       return;
     }
     if (!raw || key === "explore") {
@@ -412,12 +398,10 @@
       if (S.futureDepthSelect) S.futureDepthSelect.value = "2";
       S.shouldAutoZoomPrereq = true;
       S.currentCourseId = "AMATH250";
-      SearchUI.addToSearchHistory("AMATH250");
       performSearch();
     } else {
       S.currentCourseId = AppData.normalizeCode(raw);
       performSearch();
     }
-    SearchUI.loadSearchHistory();
   });
 })();
