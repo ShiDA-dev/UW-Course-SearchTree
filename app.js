@@ -300,9 +300,15 @@
   const headerSearch = document.getElementById("header-search");
   if (headerSearch) headerSearch.addEventListener("submit", (e) => e.preventDefault());
 
+  // Resize refits the canvas to the flex region without resetting zoom/pref intentionally
+  let resizeTimer = null;
   window.addEventListener("resize", () => {
-    renderPrereqView();
-    if (S.lastFutureRoot) FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const displayRoot = Selection.getPrereqDisplayRoot();
+      if (displayRoot && S.prereqContainer) PrereqTree.render(S.prereqContainer, displayRoot);
+      if (S.lastFutureRoot) FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
+    }, 120);
   });
 
   if (S.prereqZoomInBtn) S.prereqZoomInBtn.addEventListener("click", () => setPrereqZoom(S.prereqZoom * 1.2));

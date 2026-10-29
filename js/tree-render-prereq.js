@@ -152,51 +152,6 @@
       return block;
     }
 
-    /**
-     * Layout prereq basket stack for `course` into column courseCol+1.
-     * Recurses into each aim's prereqs first (deeper columns).
-     */
-    function layoutPrereqs(course, courseCol) {
-      const baskets = prereqBaskets(course);
-      if (!baskets.length) return;
-
-      // Deep first: aim subtrees occupy courseCol+2 …
-      for (const b of baskets) {
-        const aim = OB.aimChild(b);
-        if (aim && OB.shouldShowSubtree(b, aim) && prereqBaskets(aim).length) {
-          // Aim pill will sit in courseCol+1; its prereqs go to courseCol+2
-          if (!positions.has(aim)) {
-            // Temporary; placeBasket will overwrite with rigid pack coords
-            placeCourse(aim, courseCol + 1, 0);
-          }
-          layoutPrereqs(aim, courseCol + 1);
-        }
-      }
-
-      // Stack baskets by frame height only (Figma STACK_GAP ≈ 39)
-      let y = 0;
-      const placed = [];
-      for (const b of baskets) {
-        const block = placeBasket(b, courseCol + 1, y);
-        placed.push(block);
-        y += block.h + STACK_GAP;
-      }
-      // Drop trailing gap from cursor mental model
-      if (placed.length) y -= STACK_GAP;
-
-      // Center course on the basket stack
-      const stackTop = placed[0].y0;
-      const stackBot = placed[placed.length - 1].y0 + placed[placed.length - 1].h;
-      const courseY = (stackTop + stackBot) / 2 - PILL_H / 2;
-      placeCourse(course, courseCol, courseY);
-
-      // Align each aim subtree to its aim pill (subtree in deeper columns only)
-      for (const block of placed) {
-        if (!block.aim) continue;
-        alignAimSubtree(block);
-      }
-    }
-
     /** Collect every positioned node under course's prereq baskets (not the course pill). */
     function collectPrereqNodes(course, into) {
       for (const b of prereqBaskets(course)) {
@@ -208,20 +163,14 @@
       }
     }
 
-    function alignAimSubtree(block) {
-      const aim = block.aim;
-      if (!aim || !positions.has(aim)) return;
-      const nodes = new Set();
-      collectPrereqNodes(aim, nodes);
-      if (!nodes.size) return;
-
+    /** Full vertical claim of a positioned node set (basket frames preferred). */
+    function nodesYSpan(nodeSet) {
       let minY = Infinity;
       let maxY = -Infinity;
-      for (const n of nodes) {
+      for (const n of nodeSet) {
         const p = positions.get(n);
         if (!p) continue;
         if (n.isGroup) {
-          // Use basket frame if we know it
           const colBlocks = blocksByCol.get(Math.round(p.x / COL_PITCH)) || [];
           const bb = colBlocks.find((bl) => bl.node === n);
           if (bb) {
@@ -233,21 +182,77 @@
         minY = Math.min(minY, p.y);
         maxY = Math.max(maxY, p.y + PILL_H);
       }
-      if (!isFinite(minY)) return;
+      return { minY, maxY };
+    }
 
-      const aimMid = positions.get(aim).y + PILL_H / 2;
-      const subMid = (minY + maxY) / 2;
-      const dy = aimMid - subMid;
-      if (Math.abs(dy) < 0.5) return;
-      shiftNodes(nodes, dy);
-      // Keep block records in sync for baskets we moved
-      for (const n of nodes) {
+    function syncBasketBlockY(nodeSet, dy) {
+      for (const n of nodeSet) {
         if (!n.isGroup) continue;
         const col = Math.round((positions.get(n)?.x || 0) / COL_PITCH);
         const list = blocksByCol.get(col) || [];
         const bb = list.find((bl) => bl.node === n);
         if (bb) bb.y0 += dy;
       }
+    }
+
+    function alignAimSubtree(block) {
+      const aim = block.aim;
+      if (!aim || !positions.has(aim)) return null;
+      const nodes = new Set();
+      collectPrereqNodes(aim, nodes);
+      if (!nodes.size) return null;
+
+      const span = nodesYSpan(nodes);
+      if (!isFinite(span.minY)) return null;
+
+      const aimMid = positions.get(aim).y + PILL_H / 2;
+      const subMid = (span.minY + span.maxY) / 2;
+      const dy = aimMid - subMid;
+      if (Math.abs(dy) >= 0.5) {
+        shiftNodes(nodes, dy);
+        syncBasketBlockY(nodes, dy);
+        span.minY += dy;
+        span.maxY += dy;
+      }
+      return span;
+    }
+
+    /**
+     * Layout prereq basket stack for `course` into column courseCol+1.
+     * Each sibling reserves max(frame, aim-subtree) so CS136 vs CS136L-class
+     * branches keep distinct vertical space (occurrence-stable via node uid).
+     */
+    function layoutPrereqs(course, courseCol) {
+      const baskets = prereqBaskets(course);
+      if (!baskets.length) return;
+
+      // Deep first: each aim's prereqs occupy courseCol+2 …
+      for (const b of baskets) {
+        const aim = OB.aimChild(b);
+        if (aim && OB.shouldShowSubtree(b, aim) && prereqBaskets(aim).length) {
+          if (!positions.has(aim)) placeCourse(aim, courseCol + 1, 0);
+          layoutPrereqs(aim, courseCol + 1);
+        }
+      }
+
+      let y = 0;
+      const placed = [];
+      for (const b of baskets) {
+        const block = placeBasket(b, courseCol + 1, y);
+        placed.push(block);
+        let spanBot = block.y0 + block.h;
+        if (block.aim) {
+          const span = alignAimSubtree(block);
+          if (span && isFinite(span.maxY)) spanBot = Math.max(spanBot, span.maxY);
+        }
+        y = spanBot + STACK_GAP;
+      }
+      if (placed.length) y -= STACK_GAP;
+
+      const stackTop = placed[0].y0;
+      const stackBot = placed[placed.length - 1].y0 + placed[placed.length - 1].h;
+      const courseY = (stackTop + stackBot) / 2 - PILL_H / 2;
+      placeCourse(course, courseCol, courseY);
     }
 
     function shiftNodes(nodeSet, dy) {
@@ -290,25 +295,39 @@
       });
     }
 
-    // Per-column resolve: push later blocks down so frames never overlap
-    for (let col = maxCol; col >= 0; col--) {
-      const list = (blocksByCol.get(col) || []).slice().sort((a, b) => a.y0 - b.y0);
-      for (let i = 0; i < list.length - 1; i++) {
-        const a = list[i];
-        const b = list[i + 1];
-        const need = a.y0 + a.h + STACK_GAP;
-        if (b.y0 < need) {
-          if (b.kind === "basket") shiftBlockDeep(b, need - b.y0);
-          else {
+    /** Vertical claim including aim subtree (sibling branches stay separated). */
+    function blockClaimBottom(block) {
+      let bot = block.y0 + block.h;
+      if (block.kind === "basket" && block.aim) {
+        const nodes = new Set();
+        collectPrereqNodes(block.aim, nodes);
+        const span = nodesYSpan(nodes);
+        if (isFinite(span.maxY)) bot = Math.max(bot, span.maxY);
+      }
+      return bot;
+    }
+
+    function resolveColumnOverlaps() {
+      for (let col = maxCol; col >= 0; col--) {
+        const list = (blocksByCol.get(col) || []).slice().sort((a, b) => a.y0 - b.y0);
+        for (let i = 0; i < list.length - 1; i++) {
+          const a = list[i];
+          const b = list[i + 1];
+          const need = blockClaimBottom(a) + STACK_GAP;
+          if (b.y0 < need - 0.5) {
             const dy = need - b.y0;
-            b.y0 += dy;
-            const p = positions.get(b.node);
-            if (p) p.y += dy;
+            if (b.kind === "basket") shiftBlockDeep(b, dy);
+            else {
+              b.y0 += dy;
+              const p = positions.get(b.node);
+              if (p) p.y += dy;
+            }
           }
         }
       }
-      // Re-center each course that owns these baskets after pushes
     }
+
+    resolveColumnOverlaps();
 
     // Re-center free courses (never in-basket aim pills — those stay on the rigid pack)
     (function recentering(course) {
@@ -348,28 +367,16 @@
       }
     })(root);
 
-    // Final per-column pass after recentering/align (guarantees no frame overlap)
-    for (let pass = 0; pass < 3; pass++) {
-      let moved = false;
-      for (let col = maxCol; col >= 1; col--) {
-        const list = (blocksByCol.get(col) || []).slice().sort((a, b) => a.y0 - b.y0);
-        for (let i = 0; i < list.length - 1; i++) {
-          const a = list[i];
-          const b = list[i + 1];
-          const need = a.y0 + a.h + STACK_GAP;
-          if (b.y0 < need - 0.5) {
-            const dy = need - b.y0;
-            if (b.kind === "basket") shiftBlockDeep(b, dy);
-            else {
-              b.y0 += dy;
-              const p = positions.get(b.node);
-              if (p) p.y += dy;
-            }
-            moved = true;
-          }
-        }
-      }
-      if (!moved) break;
+    // Final passes after recentering/align (subtree-aware; no course-specific offsets)
+    for (let pass = 0; pass < 4; pass++) {
+      const before = JSON.stringify(
+        [...blocksByCol.values()].flat().map((bl) => [bl.node.uid || bl.node.id, bl.y0])
+      );
+      resolveColumnOverlaps();
+      const after = JSON.stringify(
+        [...blocksByCol.values()].flat().map((bl) => [bl.node.uid || bl.node.id, bl.y0])
+      );
+      if (before === after) break;
     }
 
     // --- Mirror to screen coords (root on the right) ---
@@ -483,7 +490,7 @@
       }
     }
 
-    // AND labels between sibling baskets under the same AND junction
+    // AND labels: tied to the AND junction's child baskets, mid-gap only (never inside a basket)
     (function drawAndLabels() {
       (function walk(n) {
         if (isAndJunction(n)) {
@@ -492,16 +499,20 @@
             const b1 = groupBounds.get(kids[i]);
             const b2 = groupBounds.get(kids[i + 1]);
             if (!b1 || !b2) continue;
+            const gap = b2.minY - b1.maxY;
+            if (gap < 10) continue; // refuse to paint over crowded rows
             const x = (b1.midX + b2.midX) / 2;
-            const y = (b1.maxY + b2.minY) / 2;
-            SvgUtils.svgText(g, x, y, "AND", "and-label", "middle", "middle");
+            const y = b1.maxY + gap / 2;
+            const label = SvgUtils.svgText(g, x, y, "AND", "and-label", "middle", "middle");
+            label.setAttribute("data-and-uid", String(n.uid || n.id));
+            label.setAttribute("data-joins", `${kids[i].uid || kids[i].id},${kids[i + 1].uid || kids[i + 1].id}`);
           }
         }
         for (const c of n.children || []) walk(c);
       })(root);
     })();
 
-    // --- Edges ---
+    // --- Edges (occurrence-stable via node uid) ---
     const edgesFrag = document.createDocumentFragment();
 
     function courseAncestor(node) {
@@ -513,15 +524,21 @@
       return null;
     }
 
-    function addEdgePath(d, onPath) {
+    function addEdgePath(d, onPath, meta) {
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", d);
       path.setAttribute("fill", "none");
       path.setAttribute("class", onPath ? "edge highlight-edge" : "edge");
+      if (meta) {
+        if (meta.fromUid != null) path.setAttribute("data-from-uid", String(meta.fromUid));
+        if (meta.toUid != null) path.setAttribute("data-to-uid", String(meta.toUid));
+        if (meta.role) path.setAttribute("data-edge-role", meta.role);
+      }
       edgesFrag.appendChild(path);
     }
 
     function drawBasketRoutes() {
+      // Group by target *occurrence* (object identity / uid), never by course code alone
       const byTarget = new Map();
       for (const basket of groupNodes) {
         if (!groupBounds.has(basket)) continue;
@@ -535,12 +552,19 @@
         const tPos = nodePos(target);
         const targetLeft = tPos.x;
         const targetY = tPos.y + PILL_H / 2;
+        const targetUid = target.uid || target.id;
         const sources = baskets.map((basket) => {
           const bounds = groupBounds.get(basket);
           const aim = OB.aimChild(basket);
+          // Row port: aim pill midY; group port fallback: basket mid
           let y = bounds.midY;
           if (aim && positions.has(aim)) y = nodePos(aim).y + PILL_H / 2;
-          return { x: bounds.maxX, y, basket };
+          return {
+            x: bounds.maxX,
+            y,
+            basket,
+            fromUid: (aim && aim.uid) || basket.uid || basket.id,
+          };
         });
         const maxSourceX = Math.max(...sources.map((s) => s.x));
         const ys = sources.map((s) => s.y).concat([targetY]);
@@ -557,13 +581,28 @@
         const routeOn = S.pathFocusActive && baskets.some((b) => S.hasSelectedMap.get(b));
         for (const s of sources) {
           const on = S.pathFocusActive && !!S.hasSelectedMap.get(s.basket);
-          addEdgePath(`M ${s.x} ${s.y} H ${spineX}`, on);
+          addEdgePath(`M ${s.x} ${s.y} H ${spineX}`, on, {
+            fromUid: s.fromUid,
+            toUid: targetUid,
+            role: "stub-out",
+          });
         }
-        if (maxY - minY > 0.5) addEdgePath(`M ${spineX} ${minY} V ${maxY}`, routeOn);
-        if (baseX > spineX + 0.5) addEdgePath(`M ${spineX} ${targetY} H ${baseX}`, routeOn);
+        if (maxY - minY > 0.5) {
+          addEdgePath(`M ${spineX} ${minY} V ${maxY}`, routeOn, {
+            toUid: targetUid,
+            role: "spine",
+          });
+        }
+        if (baseX > spineX + 0.5) {
+          addEdgePath(`M ${spineX} ${targetY} H ${baseX}`, routeOn, {
+            toUid: targetUid,
+            role: "stub-in",
+          });
+        }
         const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
         head.setAttribute("points", `${tipX},${targetY} ${baseX},${targetY - 5} ${baseX},${targetY + 5}`);
         head.setAttribute("class", routeOn ? "edge-anchor highlight-anchor" : "edge-anchor");
+        head.setAttribute("data-to-uid", String(targetUid));
         edgesFrag.appendChild(head);
       }
     }
@@ -635,9 +674,10 @@
     }
     if (!isFinite(graphTop)) graphTop = 0;
 
-    const canvasH = Math.max(542, Math.floor(container.clientHeight || 542));
+    // Fill the flex tree region; fall back sensibly if layout not yet sized
+    const canvasH = Math.max(240, Math.floor(container.clientHeight || container.getBoundingClientRect().height || 480));
     const contentH = Math.max(0, Math.max(graphBottom, contentMaxY) - graphTop);
-    const fits = contentH + CANVAS_PAD_Y <= canvasH;
+    const fits = contentH + CANVAS_PAD_Y * 2 <= canvasH;
     const topShift = fits ? (canvasH - contentH) / 2 - graphTop : CANVAS_PAD_Y - graphTop;
     const height = fits ? canvasH : Math.ceil(contentH + CANVAS_PAD_Y * 2);
 
@@ -658,7 +698,7 @@
     svg.setAttribute("width", String(containerWidth));
     svg.setAttribute("height", String(height));
     svg.style.width = "100%";
-    svg.style.height = fits ? "100%" : "auto";
+    svg.style.height = "100%";
     g.setAttribute("transform", `translate(0,${topShift})`);
 
     SvgUtils.setupMinimap(container, svg, { contentWidth: containerWidth, contentHeight: height });

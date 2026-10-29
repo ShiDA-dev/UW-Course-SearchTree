@@ -36,8 +36,10 @@ body[data-pref="none"]{--pf:#222222;--pf-soft:#ffffff;--pf-edge:transparent}
 .shell{
   max-width:none;
   width:100%;
+  min-height:100vh;
+  min-height:100dvh;
   margin:0;
-  padding:8px clamp(12px, 2vw, 24px) 32px;
+  padding:8px clamp(12px, 2vw, 24px) 12px;
   display:flex;
   flex-direction:column;
   gap:8px;
@@ -550,7 +552,13 @@ button.history-item,
 }
 .header-search .suggestions{top:calc(100% + 8px)}
 
-.view-explore{display:flex;flex-direction:column;gap:6px}
+.view-explore{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  flex:1 1 auto;
+  min-height:0;
+}
 .view-explore[hidden],
 .doc-view[hidden]{display:none !important}
 .explore-banner{
@@ -560,6 +568,7 @@ button.history-item,
   gap:12px;
   padding:0 6px;
   min-height:32px;
+  flex:0 0 auto;
 }
 .course-title{
   margin:0;
@@ -606,8 +615,12 @@ body[data-pref="none"] .pf-chip.is-on{
   padding:11px 17px;
   box-shadow:none;
   min-height:0;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  position:relative;
 }
-.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px;position:relative;z-index:5}
+.panel-tools{display:flex;justify-content:flex-end;margin-bottom:10px;position:relative;z-index:5;flex:0 0 auto}
 .panel-footnote{
   margin:10px 0 0;
   color:#6a6a6a;
@@ -646,16 +659,23 @@ body[data-pref="none"] .pf-chip.is-on{
 .view-explore .tree{
   background:#f7f7f7;
   border-radius:10px;
-  min-height:542px;
-  height:542px;
+  flex:1 1 auto;
+  min-height:240px;
+  height:auto;
   padding:0;
   box-sizing:border-box;
   display:block;
+  position:relative;
+  overflow:auto;
 }
 .view-explore .tree svg{
   display:block;
   margin:0 auto;
+  width:100%;
+  height:100%;
 }
+.view-explore .panel-footnote{flex:0 0 auto}
+.mode-banner{flex:0 0 auto}
 /* REVIEW D SoT has no zoom chrome on the prereq canvas — keep controls for a11y but unobtrusive */
 .view-explore .zoom-controls{
   position:absolute;
