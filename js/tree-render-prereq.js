@@ -1,8 +1,7 @@
 /**
  * Render the prerequisite tree as SVG (Phase C OR freeze grammar):
  * - OR baskets: 1 of N badge, score-sorted pills, collapsed +N more / Show less
- * - No spider lines inside baskets; orthogonal fork-join outbound
- * - One arrowhead on the destination pill's left edge (none at AND hubs)
+ * - No spider lines inside baskets; fork-join outbound
  * - Depth 2+: highest-score subtree default; that pill gets strong ink stroke
  * - AND centered H+V between stacked baskets
  */
@@ -76,13 +75,10 @@
     }
     const maxDepthForWidth = computeMaxDepth(root);
     const containerWidth = Math.max(300, Math.floor(container.clientWidth || container.getBoundingClientRect().width));
-    const sidePad = 24;
-    let levelGap = HORIZONTAL_GAP;
-    if (maxDepthForWidth > 0) {
-      levelGap = Math.max(
-        HORIZONTAL_GAP,
-        Math.floor((containerWidth - sidePad * 2 - maxNodeWidth - OB.basketWidth()) / maxDepthForWidth)
-      );
+    let levelGap = Math.max(HORIZONTAL_GAP, Math.floor((containerWidth - maxNodeWidth - 10) / Math.max(1, maxDepthForWidth)));
+    const estimatedTreeWidth = maxDepthForWidth * levelGap + maxNodeWidth;
+    if (estimatedTreeWidth < containerWidth * 0.8 && maxDepthForWidth > 0) {
+      levelGap = Math.floor((containerWidth * 0.8 - maxNodeWidth - 10) / maxDepthForWidth);
     }
 
     let maxDepth = 0;
@@ -210,40 +206,23 @@
     }
 
     const nominalContentWidth = (maxDepth + 1) * levelGap + Math.max(maxNodeWidth, OB.basketWidth()) + 10;
-    function rawLeft(node) {
-      const p = positions.get(node);
-      return nominalContentWidth - (p.x + getWidth(node));
-    }
-    // Stretch column gaps so the leftmost basket and the target pill use the viewport width.
-    // Pill sizes stay fixed; only the x positions move.
-    let rawMin = Infinity;
-    let rawMax = -Infinity;
-    (function spanVisible(n) {
-      const junction = n.isGroup || (n.id || "").startsWith("and-") || (n.id || "").startsWith("or-");
-      if (!junction && positions.has(n)) {
-        const x = rawLeft(n);
-        const w = getWidth(n);
-        const inBasket = !!(parentMap.get(n) && parentMap.get(n).isGroup);
-        const pad = inBasket ? OB.BASKET_PAD : 0;
-        rawMin = Math.min(rawMin, x - pad);
-        rawMax = Math.max(rawMax, x + w + pad);
-      }
-      for (const c of walkKids(n)) spanVisible(c);
-    })(root);
-    const sideInset = 8;
-    let xScale = 1;
-    let xShift = 0;
-    if (isFinite(rawMin) && rawMax > rawMin) {
-      const room = Math.max(rawMax - rawMin, containerWidth - sideInset * 2);
-      xScale = room / (rawMax - rawMin);
-      xShift = sideInset - rawMin * xScale;
-      const scaledRight = rawMax * xScale + xShift;
-      if (scaledRight > containerWidth - sideInset) xShift -= scaledRight - (containerWidth - sideInset);
-    }
     function nodePos(node) {
       const p = positions.get(node);
-      return { x: rawLeft(node) * xScale + xShift, y: p.y };
+      const w = getWidth(node);
+      return { x: nominalContentWidth - (p.x + w), y: p.y };
     }
+
+    let minX = Infinity,
+      maxX = -Infinity;
+    (function measure(n) {
+      const p = nodePos(n);
+      const w = getWidth(n);
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x + w);
+      for (const c of walkKids(n)) measure(c);
+    })(root);
+    const baseTranslateX = isFinite(minX) ? -minX : 0;
+    const contentWidth = isFinite(maxX - minX) ? maxX - minX : nominalContentWidth;
 
     const groupNodes = [];
     (function collectGroups(n) {
@@ -332,80 +311,146 @@
       }
     }
 
+    const drawnEdges = new Set();
     const edgesFrag = document.createDocumentFragment();
+    const orGroupConvergencePoints = new Map();
 
-    function courseAncestor(node) {
-      let p = parentMap.get(node);
-      while (p) {
-        const junction = p.isGroup || (p.id || "").startsWith("and-") || (p.id || "").startsWith("or-");
-        if (!junction) return p;
-        p = parentMap.get(p);
-      }
-      return null;
-    }
-
-    function addEdgePath(d, onPath) {
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", d);
-      path.setAttribute("fill", "none");
-      path.setAttribute("class", onPath ? "edge highlight-edge" : "edge");
-      edgesFrag.appendChild(path);
-    }
-
-    // Baskets share one vertical spine into the nearest course pill.
-    // Elbows only: H from the basket, V on the spine, H into the pill.
-    // The arrow sits on that pill's left edge — never on an AND hub.
-    function drawBasketRoutes() {
-      const byTarget = new Map();
-      for (const basket of groupNodes) {
-        if (!groupBounds.has(basket)) continue;
-        const target = courseAncestor(basket);
-        if (!target || !positions.has(target)) continue;
-        if (!byTarget.has(target)) byTarget.set(target, []);
-        byTarget.get(target).push(basket);
-      }
-
-      for (const [target, baskets] of byTarget) {
-        const tPos = nodePos(target);
-        const targetLeft = tPos.x;
-        const targetY = tPos.y + NODE_HEIGHT / 2;
-        const sources = baskets.map((basket) => {
-          const bounds = groupBounds.get(basket);
-          const aim = OB.aimChild(basket);
-          let y = bounds.midY;
-          if (aim && positions.has(aim)) {
-            const ap = nodePos(aim);
-            y = ap.y + NODE_HEIGHT / 2;
-          }
-          return { x: bounds.maxX, y, basket };
-        });
-        const maxSourceX = Math.max(...sources.map((s) => s.x));
-        const ys = sources.map((s) => s.y).concat([targetY]);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-        let spineX = maxSourceX + Math.max(18, (targetLeft - maxSourceX) * 0.45);
-        spineX = Math.min(spineX, targetLeft - 18);
-        spineX = Math.max(spineX, maxSourceX + 8);
-
-        const routeOn = S.pathFocusActive && baskets.some((b) => S.hasSelectedMap.get(b));
-        for (const s of sources) {
-          const on = S.pathFocusActive && !!S.hasSelectedMap.get(s.basket);
-          addEdgePath(`M ${s.x} ${s.y} H ${spineX}`, on);
+    function drawEdges(node) {
+      const p = nodePos(node);
+      for (const child of walkKids(node)) {
+        if (child.isGroup && (child.children || []).length > 0) {
+          for (const grandchild of walkKids(child)) drawEdges(grandchild);
+          continue;
         }
-        if (maxY - minY > 0.5) addEdgePath(`M ${spineX} ${minY} V ${maxY}`, routeOn);
-        const tipX = targetLeft;
-        const baseX = tipX - 9;
-        if (baseX > spineX + 0.5) addEdgePath(`M ${spineX} ${targetY} H ${baseX}`, routeOn);
-        const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        head.setAttribute("points", `${tipX},${targetY} ${baseX},${targetY - 4.5} ${baseX},${targetY + 4.5}`);
-        head.setAttribute("class", routeOn ? "edge-anchor highlight-anchor" : "edge-anchor");
-        edgesFrag.appendChild(head);
+        const c = nodePos(child);
+        const edgeKey = `${Selection.nodeKey(node)}->${Selection.nodeKey(child)}`;
+        if (!drawnEdges.has(edgeKey)) {
+          drawnEdges.add(edgeKey);
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const parentIsJunction = (node.id || "").startsWith("and-") || (node.id || "").startsWith("or-") || node.isGroup;
+          const childIsJunction = (child.id || "").startsWith("and-") || (child.id || "").startsWith("or-") || child.isGroup;
+          // Aim at top-score pill when connecting into an OR basket course
+          let endX = childIsJunction ? c.x : c.x + getWidth(child) - 6;
+          let endY = c.y + NODE_HEIGHT / 2;
+          const startX = parentIsJunction ? p.x : p.x + 6;
+          const startY = p.y + NODE_HEIGHT / 2;
+          path.setAttribute("d", `M ${startX} ${startY} L ${endX} ${endY}`);
+          const highlight = S.pathFocusActive && S.currentSelection.has(Selection.nodeKey(child));
+          path.setAttribute("class", highlight ? "edge highlight-edge" : "edge");
+          edgesFrag.appendChild(path);
+        }
+        drawEdges(child);
       }
+    }
+
+    // Single outbound from basket (no spider from pills)
+    function drawORGroupEdges(node) {
+      if (node.isGroup && (node.children || []).length > 0) {
+        const bounds = groupBounds.get(node);
+        if (bounds) {
+          const parent = parentMap.get(node);
+          if (parent) {
+            const parentPos = nodePos(parent);
+            const parentIsJunction = (parent.id || "").startsWith("and-") || (parent.id || "").startsWith("or-") || parent.isGroup;
+            const parentStartX = parentIsJunction ? parentPos.x : parentPos.x + 6;
+      const top = OB.aimChild(node);
+      const topPos = top && positions.has(top) ? nodePos(top) : null;
+            const convergenceY = topPos ? topPos.y + NODE_HEIGHT / 2 : bounds.midY;
+            const convergenceX = (bounds.maxX + parentStartX) / 2;
+            orGroupConvergencePoints.set(node, { x: convergenceX, y: convergenceY });
+
+            const edgeKey = `basket-${Selection.nodeKey(node)}->converge`;
+            if (!drawnEdges.has(edgeKey)) {
+              drawnEdges.add(edgeKey);
+              const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+              path.setAttribute("d", `M ${bounds.maxX} ${convergenceY} L ${convergenceX} ${convergenceY}`);
+              path.setAttribute("class", S.pathFocusActive && S.hasSelectedMap.get(node) ? "edge highlight-edge" : "edge");
+              edgesFrag.appendChild(path);
+            }
+          }
+        }
+        for (const child of walkKids(node)) drawORGroupEdges(child);
+      } else {
+        for (const child of walkKids(node)) drawORGroupEdges(child);
+      }
+    }
+
+    function drawConvergenceToParent(node) {
+      if (node.isGroup && (node.children || []).length > 0) {
+        const convergencePoint = orGroupConvergencePoints.get(node);
+        if (convergencePoint) {
+          const parent = parentMap.get(node);
+          if (parent) {
+            const parentPos = nodePos(parent);
+            const parentIsJunction = (parent.id || "").startsWith("and-") || (parent.id || "").startsWith("or-") || parent.isGroup;
+            const parentStartX = parentIsJunction ? parentPos.x : parentPos.x + 6;
+            const parentStartY = parentPos.y + NODE_HEIGHT / 2;
+            const isAndNode = (parent.id || "").startsWith("and-");
+            const orGroupSiblings = (parent.children || []).filter((c) => c.isGroup && (c.children || []).length > 0);
+
+            if (isAndNode && orGroupSiblings.length > 1) {
+              let rightmostConvergenceX = Infinity;
+              let minConvergenceY = Infinity;
+              let maxConvergenceY = -Infinity;
+              for (const orSibling of orGroupSiblings) {
+                const convPt = orGroupConvergencePoints.get(orSibling);
+                if (convPt) {
+                  rightmostConvergenceX = Math.min(rightmostConvergenceX, convPt.x);
+                  minConvergenceY = Math.min(minConvergenceY, convPt.y);
+                  maxConvergenceY = Math.max(maxConvergenceY, convPt.y);
+                }
+              }
+              const intermediateX = (rightmostConvergenceX + parentStartX) / 2;
+              const intermediateY = (minConvergenceY + maxConvergenceY) / 2;
+
+              const edgeKey = `converge-${Selection.nodeKey(node)}->intermediate-${Selection.nodeKey(parent)}`;
+              if (!drawnEdges.has(edgeKey)) {
+                drawnEdges.add(edgeKey);
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", `M ${convergencePoint.x} ${convergencePoint.y} L ${intermediateX} ${intermediateY}`);
+                path.setAttribute("class", S.pathFocusActive && S.hasSelectedMap.get(node) ? "edge highlight-edge" : "edge");
+                edgesFrag.appendChild(path);
+              }
+              const intermediateToParentKey = `intermediate-${parent.id}->${parent.id}`;
+              if (!drawnEdges.has(intermediateToParentKey)) {
+                drawnEdges.add(intermediateToParentKey);
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", `M ${intermediateX} ${intermediateY} L ${parentStartX} ${parentStartY}`);
+                const onPath = S.pathFocusActive && orGroupSiblings.some((og) => S.hasSelectedMap.get(og));
+                path.setAttribute("class", onPath ? "edge highlight-edge" : "edge");
+                const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                head.setAttribute("points", `${parentStartX},${parentStartY} ${parentStartX - 8},${parentStartY - 4} ${parentStartX - 8},${parentStartY + 4}`);
+                head.setAttribute("class", onPath ? "edge-anchor highlight-anchor" : "edge-anchor");
+                edgesFrag.appendChild(path);
+                edgesFrag.appendChild(head);
+              }
+            } else {
+              const edgeKey = `converge-${Selection.nodeKey(node)}->${Selection.nodeKey(parent)}`;
+              if (!drawnEdges.has(edgeKey)) {
+                drawnEdges.add(edgeKey);
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", `M ${convergencePoint.x} ${convergencePoint.y} L ${parentStartX} ${parentStartY}`);
+                const onPath = S.pathFocusActive && S.hasSelectedMap.get(node);
+                path.setAttribute("class", onPath ? "edge highlight-edge" : "edge");
+                const head = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                head.setAttribute("points", `${parentStartX},${parentStartY} ${parentStartX - 8},${parentStartY - 4} ${parentStartX - 8},${parentStartY + 4}`);
+                head.setAttribute("class", onPath ? "edge-anchor highlight-anchor" : "edge-anchor");
+                edgesFrag.appendChild(path);
+                edgesFrag.appendChild(head);
+              }
+            }
+          }
+        }
+      }
+      for (const child of walkKids(node)) drawConvergenceToParent(child);
     }
 
     S.hasSelectedMap.clear();
     Selection.markHasSelected(root);
-    drawBasketRoutes();
+
+    drawORGroupEdges(root);
+    drawConvergenceToParent(root);
+    drawEdges(root);
 
     function drawNode(node) {
       const isJunction = (node.id || "").startsWith("and-") || (node.id || "").startsWith("or-") || node.isGroup;
@@ -449,31 +494,44 @@
     g.appendChild(edgesFrag);
     g.appendChild(nodesFrag);
 
-    let graphTop = 0;
-    for (const b of groupBounds.values()) graphTop = Math.min(graphTop, b.minY);
-    const topShift = graphTop < 8 ? 8 - graphTop : 0;
-    const height = contentMaxY + topShift + 20;
-    const baseViewBoxWidth = containerWidth;
+    const width = containerWidth;
+    const height = contentMaxY + 20;
+    const padding = 64;
+    svg.setAttribute("width", String(width));
+    const elementPixelHeightPrereq = Math.max(height, container.clientHeight || Math.floor(window.innerHeight * 0.8));
+    svg.setAttribute("height", String(elementPixelHeightPrereq));
+
+    const baseViewBoxWidth = contentWidth + padding * 2;
     const baseViewBoxHeight = height;
     let didAutoZoomPrereq = false;
     if (S.shouldAutoZoomPrereq) {
-      S.prereqZoom = 1;
+      const clientH = container.clientHeight || Math.floor(window.innerHeight * 0.8);
+      const target = Math.max(0.2, Math.min(1.0, clientH / (0.8 * baseViewBoxHeight)));
+      S.prereqZoom = target;
       S.shouldAutoZoomPrereq = false;
       didAutoZoomPrereq = true;
     }
 
-    const zoom = Math.max(0.2, S.prereqZoom || 1);
+    const isSinglePrereq = !root?.children || root.children.length === 0;
+    if (isSinglePrereq) {
+      const overscaleH = (elementPixelHeightPrereq || 1) / Math.max(1, baseViewBoxHeight);
+      const overscaleW = (containerWidth || 1) / Math.max(1, baseViewBoxWidth);
+      const overscale = Math.max(overscaleH, overscaleW);
+      if (overscale > 1) {
+        const target = 3.5 / overscale;
+        const clamped = Math.max(0.8, target);
+        S.prereqZoom = Math.min(S.prereqZoom, clamped);
+      }
+    }
+    const zoom = S.prereqZoom;
     const viewBoxWidthP = baseViewBoxWidth / zoom;
     const viewBoxHeightP = baseViewBoxHeight / zoom;
     const viewBoxXP = (baseViewBoxWidth - viewBoxWidthP) / 2;
     const viewBoxYP = (baseViewBoxHeight - viewBoxHeightP) / 2;
-    svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
     svg.setAttribute("viewBox", `${viewBoxXP} ${viewBoxYP} ${viewBoxWidthP} ${viewBoxHeightP}`);
-    svg.setAttribute("width", String(containerWidth));
-    svg.setAttribute("height", String(Math.max(120, Math.round(containerWidth * (viewBoxHeightP / viewBoxWidthP)))));
-    svg.style.width = "100%";
-    svg.style.height = "auto";
-    g.setAttribute("transform", `translate(0,${topShift})`);
+    svg.style.width = "";
+    svg.style.height = "";
+    g.setAttribute("transform", `translate(${baseTranslateX + padding},0)`);
 
     SvgUtils.setupMinimap(container, svg, { contentWidth: baseViewBoxWidth, contentHeight: baseViewBoxHeight });
 

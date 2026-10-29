@@ -71,9 +71,9 @@
     return sorted[0] || null;
   }
 
-  /** Outbound edge and open subtree follow the highest-score row. */
+  /** Row the outbound edge aims at: recommended pick, else highest score. */
   function aimChild(orNode) {
-    return topScoreChild(orNode);
+    return pickedChild(orNode) || topScoreChild(orNode);
   }
 
   function orderedChildren(orNode) {
@@ -99,8 +99,8 @@
   }
 
   function shouldShowSubtree(orNode, courseNode) {
-    const top = topScoreChild(orNode);
-    return !!(top && courseNode && nodeKey(top) === nodeKey(courseNode));
+    const aim = aimChild(orNode);
+    return !!(aim && courseNode && nodeKey(aim) === nodeKey(courseNode));
   }
 
   function basketWidth() {

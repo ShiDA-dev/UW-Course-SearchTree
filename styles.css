@@ -146,9 +146,9 @@ h1{
 .search-history .history-item{
   padding:6px 10px;
   border-radius:8px;
-  border:1px solid #ddd;
-  background:#fff;
-  color:#222;
+  border:1.5px solid #64748b;
+  background:#e2e8f0;
+  color:#0f172a;
   cursor:pointer;
   white-space:nowrap;
   font-size:13px;
@@ -157,7 +157,7 @@ h1{
 .option.pref{margin-left:auto;display:flex;gap:6px;align-items:center}
 /* highlight styling: stroke only for readability */
 .highlight-node{fill:#F7F7F7 !important; stroke:var(--pf) !important; stroke-width:2px !important;}
-.highlight-edge{stroke:var(--pf) !important; stroke-width:2px !important; opacity:.72}
+.highlight-edge{stroke:var(--pf-edge) !important; stroke-width:2px !important;}
 body[data-pref="none"] .grade-badge,
 body[data-pref="none"] .grade-text,
 body[data-pref="none"] .weight-text{display:none}
@@ -318,8 +318,8 @@ body[data-pref="none"] .weight-text{display:none}
 .edge-anchor-future{fill:var(--edge-future);opacity:.8;stroke:none}
 .group-label{fill:#0f172a;font-size:10px;opacity:.8}
 .edge-label{fill:#0f172a;font-size:10px;opacity:.8}
-.group-box{fill:#fff;stroke:#222;stroke-width:1.5}
-.course-chip{fill:#F7F7F7;stroke:#DDDDDD;stroke-width:1}
+.group-box{fill:#e6eef9;stroke:#91a3bc;stroke-width:1.4}
+.course-chip{fill:#e2e8f0;stroke:#64748b;stroke-width:1.4}
 .or-label{
   fill:#64748b;
   font-size:14px;
@@ -333,7 +333,7 @@ body[data-pref="none"] .weight-text{display:none}
 .edge-anchor.highlight-anchor{fill:var(--pf-edge)}
 .node-target{fill:#F7F7F7;stroke:#222;stroke-width:2px}
 #prereq-tree .node-label{fill:#222;font-weight:500;text-anchor:end}
-.grade-badge{fill:transparent}
+.grade-badge{fill:#e2e8f0}
 .grade-text{
   font-size: 12px;
   font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
