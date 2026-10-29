@@ -10,7 +10,7 @@
  *   js/tree-build.js       — build prereq / future tree structures
  *   js/tree-render-future.js — draw future-course SVG
  *   js/tree-render-prereq.js — draw prereq SVG (OR boxes, fan-in lines)
- *   js/search-ui.js        — suggestions + search history
+ *   js/search-ui.js        — suggestions only
  *   app.js (this file)     — wire UI events and orchestrate search
  */
 (function () {
@@ -104,11 +104,6 @@
     applyView();
     S.suggestionsEl.classList.remove("visible");
     S.suggestionsEl.innerHTML = "";
-    S.searchHistory = [];
-    try {
-      localStorage.removeItem("uw_search_history");
-    } catch (_) {}
-    SearchUI.renderSearchHistory();
   }
 
   function renderPrereqView() {
@@ -117,7 +112,12 @@
   }
 
   function renderTrees(courseId, prereqIndex, reverseIndex) {
-    if (window.OrBasket) OrBasket.clearExpanded();
+    const preserve = !!S.preservePathOnNextRender;
+    // Pins are captured in the depth handler before performSearch nulls the root.
+    const pinnedIds = preserve && S.pinnedPathCourseIds ? S.pinnedPathCourseIds : null;
+    S.preservePathOnNextRender = false;
+    S.pinnedPathCourseIds = null;
+    if (window.OrBasket && !preserve) OrBasket.clearExpanded();
     const prereqDepth = Math.max(1, Math.min(3, Number(S.prereqDepthSelect.value || 2)));
     if (S.prereqDepthSelect) S.prereqDepthSelect.value = String(prereqDepth);
     S.lastPrereqRoot = TreeBuild.buildPrereqHierarchy(courseId, prereqIndex, prereqDepth);
@@ -127,7 +127,11 @@
     if (pref !== "none") {
       PathFinder.setPreference(pref);
       S.pathFocusActive = true;
-      Selection.computeSelection();
+      if (preserve && pinnedIds && pinnedIds.size) {
+        Selection.computeSelectionPreservingPins(pinnedIds);
+      } else {
+        Selection.computeSelection();
+      }
     } else {
       S.pathFocusActive = false;
       S.currentSelection = new Set();
@@ -148,7 +152,6 @@
 
     const normalizedCourseId = AppData.normalizeCode(courseId);
     S.currentCourseId = normalizedCourseId;
-    SearchUI.addToSearchHistory(normalizedCourseId);
     S.currentSelection = new Set();
     S.pathFocusActive = false;
 
@@ -229,13 +232,6 @@
   S.performSearch = performSearch;
 
   // --- Event wiring ---
-  if (S.searchHistoryEl) {
-    S.searchHistoryEl.addEventListener("click", (e) => {
-      const btn = e.target.closest(".history-item");
-      if (btn) SearchUI.pickSuggestion(btn.getAttribute("data-code"));
-    });
-  }
-
   S.searchBtn.addEventListener("click", () => navigateToCourse(S.courseInput.value));
   S.courseInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -280,6 +276,9 @@
       syncPfChrome();
       if (S.currentCourseId) {
         S.shouldAutoZoomPrereq = false;
+        // Capture course_id pins before performSearch clears lastPrereqRoot.
+        S.pinnedPathCourseIds = Selection.selectedCourseIds();
+        S.preservePathOnNextRender = S.pinnedPathCourseIds.size > 0;
         performSearch();
       }
     });
@@ -313,9 +312,15 @@
   const headerSearch = document.getElementById("header-search");
   if (headerSearch) headerSearch.addEventListener("submit", (e) => e.preventDefault());
 
+  // Resize refits the canvas to the flex region without resetting zoom/pref intentionally
+  let resizeTimer = null;
   window.addEventListener("resize", () => {
-    renderPrereqView();
-    if (S.lastFutureRoot) FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const displayRoot = Selection.getPrereqDisplayRoot();
+      if (displayRoot && S.prereqContainer) PrereqTree.render(S.prereqContainer, displayRoot);
+      if (S.lastFutureRoot) FutureTree.render(S.futureContainer, S.lastFutureRoot, true);
+    }, 120);
   });
 
   if (S.prereqZoomInBtn) S.prereqZoomInBtn.addEventListener("click", () => setPrereqZoom(S.prereqZoom * 1.2));
@@ -404,7 +409,6 @@
     applyView();
     syncPfChrome();
     if (key === "guide" || key === "about") {
-      SearchUI.loadSearchHistory();
       return;
     }
     if (!raw || key === "explore") {
@@ -412,12 +416,10 @@
       if (S.futureDepthSelect) S.futureDepthSelect.value = "2";
       S.shouldAutoZoomPrereq = true;
       S.currentCourseId = "AMATH250";
-      SearchUI.addToSearchHistory("AMATH250");
       performSearch();
     } else {
       S.currentCourseId = AppData.normalizeCode(raw);
       performSearch();
     }
-    SearchUI.loadSearchHistory();
   });
 })();

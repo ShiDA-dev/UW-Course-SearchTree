@@ -24,7 +24,6 @@
     futureZoomOutBtn: null,
     futureZoomResetBtn: null,
     suggestionsEl: null,
-    searchHistoryEl: null,
     prefSelect: null,
     clearSelectionBtn: null,
     donationBtn: null,
@@ -54,9 +53,13 @@
     // When true, recommended courses are outlined on the collapsed tree
     pathFocusActive: false,
     orBasketExpanded: new Set(),
+    // When true, next renderTrees rematerializes Path Finder picks by course_id
+    // (set on depth-only changes so uid rebuilds do not reshuffle the path).
+    preservePathOnNextRender: false,
+    pinnedPathCourseIds: null,
+    prereqStructured: null,
 
     // --- Search UI ---
-    searchHistory: [],
     suggestionIndex: -1,
     suggestTimer: null,
 
@@ -84,7 +87,6 @@
     S.futureZoomOutBtn = document.getElementById("future-zoom-out-btn");
     S.futureZoomResetBtn = document.getElementById("future-zoom-reset-btn");
     S.suggestionsEl = document.getElementById("suggestions");
-    S.searchHistoryEl = document.getElementById("search-history");
     S.prefSelect = document.getElementById("pref-select");
     S.clearSelectionBtn = document.getElementById("clear-selection-btn");
     S.donationBtn = document.getElementById("donation-btn");

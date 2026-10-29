@@ -71,9 +71,12 @@
     return sorted[0] || null;
   }
 
-  /** Outbound edge and open subtree follow the highest-score row. */
+  /**
+   * Outbound edge + open subtree follow the Path Finder pick when active,
+   * otherwise the highest-score row. Occurrence identity is the node uid.
+   */
   function aimChild(orNode) {
-    return topScoreChild(orNode);
+    return pickedChild(orNode) || topScoreChild(orNode);
   }
 
   function orderedChildren(orNode) {
@@ -99,8 +102,8 @@
   }
 
   function shouldShowSubtree(orNode, courseNode) {
-    const top = topScoreChild(orNode);
-    return !!(top && courseNode && nodeKey(top) === nodeKey(courseNode));
+    const aim = aimChild(orNode);
+    return !!(aim && courseNode && nodeKey(aim) === nodeKey(courseNode));
   }
 
   function basketWidth() {
